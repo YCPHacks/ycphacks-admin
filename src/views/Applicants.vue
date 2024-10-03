@@ -156,7 +156,7 @@ export default {
     },
     async updateStatus(id, status) {
       try {
-        await axios.put(`http://localhost:3000//registration/${id}/status`, { status });
+        await axios.put(`http://localhost:3000/registration/${id}/status`, { status });
         alert('Status updated successfully!');
       } catch (error) {
         console.error('Error updating status:', error);
@@ -165,7 +165,7 @@ export default {
     },
     async deleteApplicant(id) {
       try {
-        await axios.delete(`http://localhost:3000//registration/${id}`);
+        await axios.delete(`http://localhost:3000/registration/${id}`);
         this.applicants = this.applicants.filter(applicant => applicant.id !== id);
         alert('Applicant deleted successfully!');
       } catch (error) {
