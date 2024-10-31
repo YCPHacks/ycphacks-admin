@@ -3,6 +3,8 @@
   <div class="sidenav">
     <router-link to="/dashboard">Dashboard</router-link>
     <router-link to="/applicants">Applicants</router-link>
+    <router-link to="/events">Events</router-link>
+
   </div>
 </template>
 
