@@ -90,7 +90,7 @@
       <h3>Discord Channels</h3>
       <p>In the YCPHacks discord, you can communicate with hundreds of hackers!</p>
       <button>Open #team_forming channel</button>
-      <button>Open #random channel</button>
+      <button>Open #channel</button>
     </div>
   </div>
 </template>
