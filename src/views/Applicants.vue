@@ -1,15 +1,24 @@
 <template>
   <div class="container mt-5">
-    <h2 class="mb-4 text-center">All Users</h2>
+    <h2 class="mb-4 text-center">User Management</h2>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4">
+      <li class="nav-item">
+        <button class="nav-link" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
+          All Users
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" :class="{ active: activeTab === 'staff' }" @click="activeTab = 'staff'">
+          Staff Users
+        </button>
+      </li>
+    </ul>
 
     <!-- Search Input -->
     <div class="mb-4">
-      <input
-          type="text"
-          v-model="searchQuery"
-          class="form-control"
-          placeholder="Search by name"
-      />
+      <input type="text" v-model="searchQuery" class="form-control" placeholder="Search by name" />
     </div>
 
     <!-- Table Section -->
@@ -21,21 +30,23 @@
               <th class="text-left">First Name</th>
               <th class="text-left">Last Name</th>
               <th class="text-left">Phone Number</th>
-              <th class="text-left">Hackathons Attended</th>
+              <th class="text-left">Email</th>
               <th class="text-left">Role</th>
             </tr>
           </thead>
           <tbody>
-          <tr
-              v-for="applicant in filteredApplicants"
-              :key="applicant.id"
-          >
-            <td>{{ applicant.firstName }}</td>
-            <td>{{ applicant.lastName }}</td>
-            <td>{{ applicant.phoneNumber }}</td>
-            <td>{{ applicant.hackathonsAttended }}</td>
-            <td>{{ applicant.role }}</td>
-          </tr>
+            <tr v-if="filteredUsers.length === 0">
+              <td colspan="5" class="text-center py-4 text-muted">
+                No users found
+              </td>
+            </tr>
+            <tr v-for="user in filteredUsers" :key="user.id">
+              <td>{{ user.firstName }}</td>
+              <td>{{ user.lastName }}</td>
+              <td>{{ user.phoneNumber }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.role }}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -44,46 +55,66 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
 
 export default {
-  name: "Applicants",
+  name: "UserManagement",
   data() {
     return {
-      applicants: [],
-      searchQuery: ''
+      users: [],
+      searchQuery: "",
+      activeTab: "all", // 'all' or 'staff'
     };
   },
-  created() {
-    this.fetchApplicants();
-  },
   computed: {
-    filteredApplicants() {
+    filteredUsers() {
       const query = this.searchQuery.toLowerCase();
-      return this.applicants.filter(applicant =>
-          applicant.firstName.toLowerCase().includes(query) ||
-          applicant.lastName.toLowerCase().includes(query)
+      const filteredList = this.activeTab === "all"
+        ? this.users
+        : this.users.filter(user => user.role.toLowerCase() === "staff");
+
+      return filteredList.filter(
+        user =>
+          user.firstName.toLowerCase().includes(query) ||
+          user.lastName.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query)
       );
     },
   },
+  created() {
+    this.fetchUsers();
+  },
   methods: {
-    async fetchApplicants() {
+    async fetchUsers() {
       try {
-        const response = await axios.get('http://localhost:3000/user/all');
-
-        console.log(response)
-        this.applicants = response.data.data;
+        const response = await axios.get("http://localhost:3000/user/all");
+        this.users = response.data.data;
       } catch (error) {
-        console.error('Error fetching applicants:', error);
+        console.error("Error fetching users:", error);
       }
     },
-  }
+  },
 };
 </script>
-
-<style>
+<style scoped>
 .container {
   max-width: 100%;
+}
+
+.nav-tabs {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.nav-link {
+  color: #495057;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.nav-link.active {
+  background-color: #f8f9fa;
+  border-color: #dee2e6 #dee2e6 #fff;
+  font-weight: bold;
 }
 
 .table-container {
@@ -125,3 +156,4 @@ export default {
   border-radius: 0.5rem;
 }
 </style>
+

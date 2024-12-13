@@ -1,7 +1,6 @@
 <template>
   <div>
-    <h1>Overview</h1>
-    <p>Welcome to the dashboard!</p>
+    <h1>Dashboard</h1>
   </div>
   <div class="dashboard">
     <!-- Top Metrics Section -->
@@ -44,7 +43,7 @@
 
     <!-- Upcoming Events Table -->
     <div class="upcoming-events">
-      <h3>Upcoming Events</h3>
+      <h3>Upcoming Activities</h3>
       <table>
         <thead>
           <tr>
@@ -83,14 +82,6 @@
       <a href="#" @click.prevent="toggleEvents" class="view-all">
         {{ showAllEvents ? "View Less" : "View All" }}
       </a>
-    </div>
-
-    <!-- Discord Channels Section -->
-    <div class="discord-channels">
-      <h3>Discord Channels</h3>
-      <p>In the YCPHacks discord, you can communicate with hundreds of hackers!</p>
-      <button>Open #team_forming channel</button>
-      <button>Open #channel</button>
     </div>
   </div>
 </template>

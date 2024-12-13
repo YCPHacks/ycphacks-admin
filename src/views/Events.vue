@@ -13,16 +13,20 @@
             <th class="text-left">Event</th>
             <th class="text-left">Start Date</th>
             <th class="text-left">End Date</th>
+            <th class="text-center">Actions</th>
           </tr>
           </thead>
           <tbody>
           <tr v-if="events.length === 0">
-            <td colspan="3" class="text-center">No events</td>
+            <td colspan="4" class="text-center">No events</td>
           </tr>
           <tr v-for="event in events" :key="event.id">
             <td>{{ event.eventName }}</td>
             <td>{{ event.startDate }}</td>
             <td>{{ event.endDate }}</td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-warning" @click="navigateToEventEdit(event.id)">Edit</button>
+            </td>
           </tr>
           </tbody>
         </table>
@@ -58,6 +62,7 @@
 
 <script>
 import axios from 'axios';
+import router from "@/router/index.js";
 
 export default {
   name: "Events",
@@ -87,12 +92,16 @@ export default {
     async createEvent() {
       try {
         await axios.post('http://localhost:3000/event/create', this.newEvent);
-        this.fetchEvents(); // Refresh events list
+        await this.fetchEvents(); // Refresh events list
         this.showCreateEventModal = false; // Close modal
         this.newEvent = {eventName: '', startDate: '', endDate: ''}; // Reset form
       } catch (error) {
         console.error('Error creating event:', error);
       }
+    },
+    navigateToEventEdit(id) {
+      // Navigate to the event edit page
+      this.$router.push({ name: 'EventEdit', params: { id } });
     }
   }
 };
