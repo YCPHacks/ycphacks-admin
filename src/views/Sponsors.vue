@@ -2,11 +2,56 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Our Sponsors</h2>
 
-    <!-- Add Sponsor Button -->
-    <div class="text-end mb-3">
-      <button class="btn btn-primary" @click="addSponsor">
-        Add Sponsor
-      </button>
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <!-- Add Sponsor Button -->
+        <div class="text-end mb-3">
+          <button class="btn btn-primary" @click="toggleAddForm">
+            Add Sponsor
+          </button>
+        </div>
+
+        <!-- Remove Sponsor Button -->
+        <div class="text-end mb-3">
+            <button class="btn btn-primary" @click="toggleRemoveForm">
+                Remove Sponsor
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Sponsor Form -->
+    <div v-if="showAddForm" class="card p-3 mb-3">
+      <h5>Add Sponsor</h5>
+      <form @submit.prevent="addSponsor">
+        <div class="mb-2">
+          <label class="form-label">Name</label>
+          <input v-model="addName" type="text" class="form-control" required />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Tier</label>
+          <input v-model="addTier" type="text" class="form-control" required />
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" @click="showAddForm = false">
+                Cancel
+            </button>
+            <button type="submit" class="btn btn-success">Submit</button>
+         </div>
+      </form>
+    </div>
+
+    <!-- Remove Sponsor Form -->
+    <div v-if="showRemoveForm" class="card p-3 mb-3">
+      <h5>Remove Sponsor</h5>
+      <form @submit.prevent="removeSponsor">
+        <div class="mb-2">
+          <label class="form-label">Name</label>
+          <input v-model="removeName" type="text" class="form-control" required />
+        </div>
+        <button type="button" class="btn btn-secondary" @click="showAddForm = false">
+            Cancel
+        </button>
+        <button type="submit" class="btn btn-danger">Submit</button>
+      </form>
     </div>
 
     <!-- Table Section -->
@@ -17,7 +62,6 @@
           <tr>
             <th class="text-left">Sponsor Name</th>
             <th class="text-left">Sponsor Tier</th>
-            <th class="text-center">Actions</th>
           </tr>
           </thead>
           <tbody>
@@ -25,13 +69,8 @@
             <td colspan="3" class="text-center">No sponsors available</td>
           </tr>
           <tr v-for="(sponsor, index) in sponsors" :key="index">
-            <td>{{ sponsor.name }}</td>
-            <td>{{ sponsor.tier }}</td>
-            <td class="text-center">
-              <button class="btn btn-sm btn-warning me-2" @click="editSponsor(index)">
-                Edit
-              </button>
-            </td>
+            <td class="text-center">{{ sponsor.name }}</td>
+            <td class="text-center">{{ sponsor.tier }}</td>
           </tr>
           </tbody>
         </table>
@@ -41,7 +80,7 @@
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { reactive, ref } from "vue";
 
 // List of sponsors
 const sponsors = reactive([
@@ -51,6 +90,41 @@ const sponsors = reactive([
   { name: "Sponsor D", tier: "Platinum" },
 ]);
 
+// Form state
+const addName = ref("");
+const addTier = ref("");
+const removeName = ref("");
+const showAddForm = ref(false);
+const showRemoveForm = ref(false);
+
+// Toggle forms
+const toggleAddForm = () => {
+  showAddForm.value = true;
+  showRemoveForm.value = false;
+};
+
+const toggleRemoveForm = () => {
+  showRemoveForm.value = true;
+  showAddForm.value = false;
+};
+
+// Add sponsor
+const addSponsor = () => {
+  sponsors.push({ name: addName.value, tier: addTier.value });
+  addName.value = "";
+  addTier.value = "";
+  showAddForm.value = false; // hide form after submit
+};
+
+// Remove sponsor
+const removeSponsor = () => {
+  const index = sponsors.findIndex((s) => s.name === removeName.value);
+  if (index !== -1) {
+    sponsors.splice(index, 1);
+  }
+  removeName.value = "";
+  showRemoveForm.value = false; // hide form after submit
+};
 </script>
 
 <style scoped>
@@ -116,5 +190,23 @@ const sponsors = reactive([
 .btn-outline-danger:hover {
   background-color: #dc3545;
   color: white;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+}
+
+.popup {
+  max-width: 400px;
+  width: 100%;
 }
 </style>
