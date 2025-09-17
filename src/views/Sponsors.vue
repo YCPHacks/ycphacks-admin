@@ -30,6 +30,10 @@
           <label class="form-label">Tier</label>
           <input v-model="addTier" type="text" class="form-control" required />
         </div>
+        <div class="mb-2">
+            <label class="form-label">Image PNG</label>
+            <input v-model="addPNG" type="text" class="form-control" />
+        </div>
         <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="showAddForm = false">
                 Cancel
