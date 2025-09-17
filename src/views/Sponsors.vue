@@ -54,6 +54,29 @@
       </form>
     </div>
 
+    <!-- Edit Sponsor Popup -->
+    <div v-if="showEditForm" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Edit Sponsor</h5>
+        <form @submit.prevent="updateSponsor">
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="editName" type="text" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Tier</label>
+            <input v-model="editTier" type="text" class="form-control" required />
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" @click="cancelEdit">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-success">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
       <div class="table-responsive">
@@ -68,7 +91,7 @@
           <tr v-if="sponsors.length === 0">
             <td colspan="3" class="text-center">No sponsors available</td>
           </tr>
-          <tr v-for="(sponsor, index) in sponsors" :key="index">
+          <tr v-for="(sponsor, index) in sponsors" :key="index" @click="openEditForm(index)" style="cursor: pointer">
             <td class="text-center">{{ sponsor.name }}</td>
             <td class="text-center">{{ sponsor.tier }}</td>
           </tr>
@@ -96,6 +119,11 @@ const addTier = ref("");
 const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
+// Edit sponsor state
+const showEditForm = ref(false);
+const editIndex = ref(null);
+const editName = ref("");
+const editTier = ref("");
 
 // Toggle forms
 const toggleAddForm = () => {
@@ -124,6 +152,30 @@ const removeSponsor = () => {
   }
   removeName.value = "";
   showRemoveForm.value = false; // hide form after submit
+};
+
+// Open edit form
+const openEditForm = (index) => {
+    editIndex.value = index;
+    editName.value = sponsors[index].name;
+    editTier.value = sponsors[index].tier;
+    showEditForm.value = true;
+};
+
+// Save changes to update sponsor
+const updateSponsor = () => {
+    if(editIndex.value !== null){
+        sponsors[editIndex.value].name = editName.value;
+        sponsors[editIndex.value].tier = editTier.value;
+    }
+    showEditForm.value = false;
+    editIndex.value = null;
+};
+
+// Cancel Edit
+const cancelEdit = () => {
+    showEditForm.value = false;
+    editIndex.value = null;
 };
 </script>
 
