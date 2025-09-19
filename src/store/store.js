@@ -22,7 +22,7 @@ export default createStore({
                     password: formData.password
                 }
 
-                const response = await axios.post("http://localhost:3000/user/admin", loginData, {
+                const response = await axios.post("http://localhost:3000/user/admin-login", loginData, {
                     headers: {
                         "Content-Type": "application/json",
                     },

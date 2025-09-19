@@ -31,6 +31,10 @@
           <input v-model="addTier" type="text" class="form-control" required />
         </div>
         <div class="mb-2">
+            <label class="form-label">Website URL</label>
+            <input v-model="addWebsite" type="text" class="form-control" />
+        </div>
+        <div class="mb-2">
             <label class="form-label">Image PNG</label>
             <input v-model="addPNG" type="text" class="form-control" />
         </div>
@@ -95,7 +99,7 @@
           <tr v-if="sponsors.length === 0">
             <td colspan="3" class="text-center">No sponsors available</td>
           </tr>
-          <tr v-for="(sponsor, index) in sponsors" :key="index" @click="openEditForm(index)" style="cursor: pointer">
+          <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
             <td class="text-center">{{ sponsor.name }}</td>
             <td class="text-center">{{ sponsor.tier }}</td>
           </tr>
@@ -107,15 +111,11 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { ref, onMounted } from "vue";
+import { getSponsors, addSponsor as apiAddSponsor, updateSponsor as apiUpdateSponsor, deleteSponsor as apiDeleteSponsor } from "@/services/sponsorService";
 
 // List of sponsors
-const sponsors = reactive([
-  { name: "Sponsor A", tier: "Gold" },
-  { name: "Sponsor B", tier: "Silver" },
-  { name: "Sponsor C", tier: "Bronze" },
-  { name: "Sponsor D", tier: "Platinum" },
-]);
+const sponsors = ref([]);
 
 // Form state
 const addName = ref("");
@@ -123,11 +123,23 @@ const addTier = ref("");
 const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
+
 // Edit sponsor state
 const showEditForm = ref(false);
 const editIndex = ref(null);
+const editId = ref(null);
 const editName = ref("");
 const editTier = ref("");
+
+// Fetch sponsors on load
+onMounted(async () => {
+    try{
+        const res = await getSponsors();
+        sponsors.value = Array.isArray(res.data) ? res.data : [];
+    }catch (err){
+        console.error("Error fetching sponsors: ", err);
+    }
+});
 
 // Toggle forms
 const toggleAddForm = () => {
@@ -141,45 +153,67 @@ const toggleRemoveForm = () => {
 };
 
 // Add sponsor
-const addSponsor = () => {
-  sponsors.push({ name: addName.value, tier: addTier.value });
-  addName.value = "";
-  addTier.value = "";
-  showAddForm.value = false; // hide form after submit
+const addSponsor = async () => {
+  try{
+    await apiAddSponsor({ name: addName.value, tier: addTier.value });
+    const res = await getSponsors();
+    sponsors.value = res.data;
+    addName.value = "";
+    addTier.value = "";
+    showAddForm.value = false;
+  }catch(err){
+    console.error("Error adding sponsor: ", err);
+  }
 };
 
 // Remove sponsor
 const removeSponsor = () => {
-  const index = sponsors.findIndex((s) => s.name === removeName.value);
-  if (index !== -1) {
-    sponsors.splice(index, 1);
+  try{
+    const index = sponsors.findIndex((s) => s.name === removeName.value);
+    if (index !== -1) {
+      sponsors.splice(index, 1);
+    }
+    removeName.value = "";
+    showRemoveForm.value = false; // hide form after submit
+  }catch(err){
+    console.error("Error removing sponsor: ", err);
   }
-  removeName.value = "";
-  showRemoveForm.value = false; // hide form after submit
 };
 
 // Open edit form
 const openEditForm = (index) => {
+    const sponsor = sponsors.value[index];
     editIndex.value = index;
-    editName.value = sponsors[index].name;
-    editTier.value = sponsors[index].tier;
+    editId.value = sponsor.id;
+    editName.value = sponsor.name;
+    editTier.value = sponsor.tier;
     showEditForm.value = true;
 };
 
 // Save changes to update sponsor
-const updateSponsor = () => {
-    if(editIndex.value !== null){
-        sponsors[editIndex.value].name = editName.value;
-        sponsors[editIndex.value].tier = editTier.value;
+const updateSponsor = async () => {
+    try{
+        if(editIndex.value !== null){
+            await apiUpdateSponsor(editId.value, {
+                name: editName.value,
+                tier: editTier.value,
+            });
+            sponsors[editIndex.value].name = editName.value;
+            sponsors[editIndex.value].tier = editTier.value;
+        }
+        showEditForm.value = false;
+        editIndex.value = null;
+        editId.value = null;
+    }catch (err){
+        console.error("Error updating sponsor: ", err);
     }
-    showEditForm.value = false;
-    editIndex.value = null;
 };
 
 // Cancel Edit
 const cancelEdit = () => {
     showEditForm.value = false;
     editIndex.value = null;
+    editId.value = null;
 };
 </script>
 
