@@ -31,9 +31,18 @@ const router = createRouter({
     routes,
 });
 
+const roleMap = {
+    1: 'participant',
+    2: 'staff',
+    3: 'oscar'
+};
+
 router.beforeEach((to, from, next) => {
-    const isAuthenticated = store.state.user && store.state.user.role > 1;
-    if (to.path !== '/login' && !isAuthenticated) {
+    const UserRole = roleMap[store.state.user?.role];
+    const isAuthenticated = UserRole === 'staff' || UserRole === 'oscar';
+    if (to.path === '/login') {
+        next();
+    }else if(!isAuthenticated){
         next('/login');
     } else {
         next();

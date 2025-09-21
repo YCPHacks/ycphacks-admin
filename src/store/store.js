@@ -13,6 +13,9 @@ export default createStore({
             // if the user has been set it's assumed to be safe to navigate to the dashboard
             router.push('/')
         },
+        clearUser(state){
+            state.user = null
+        }
     },
     actions: {
         async loginAdminUser({commit}, formData) {
@@ -41,8 +44,9 @@ export default createStore({
                 const token = {
                     token: document.cookie.split('; ').find(row => row.startsWith('token=')).split('=')[1]
                 }
+                if (!token) return;
 
-                const response = await axios.post("http://localhost:3000/user/auth", token, {
+                const response = await axios.post("http://localhost:3000/user/auth", {token}, {
                     headers: {
                         "Content-Type": "application/json",
                     },
@@ -57,9 +61,13 @@ export default createStore({
             }
         },
         async logout({commit}) {
-            commit("setUser", {});
+            commit("clearUser");
             document.cookie = `token=; path=/;`;
+            router.push("/login");
         }
     },
-    getters: {},
+    getters: {
+        isAuthenticated: (state) => !!state.user,
+        UserRole: (state) => state.user?.role || null,
+    },
 });
