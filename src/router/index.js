@@ -32,8 +32,11 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-    const isAuthenticated = store.state.user && store.state.user.role > 1;
-    if (to.path !== '/login' && !isAuthenticated) {
+    const UserRole = store.state.user?.role;
+    const isAuthenticated = UserRole === 'staff' || UserRole === 'oscar';
+    if (to.path === '/login') {
+        next();
+    }else if (!isAuthenticated){
         next('/login');
     } else {
         next();
