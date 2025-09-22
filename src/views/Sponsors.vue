@@ -21,7 +21,7 @@
     <!-- Add Sponsor Form -->
     <div v-if="showAddForm" class="card p-3 mb-3">
       <h5>Add Sponsor</h5>
-      <form @submit.prevent="addSponsor">
+      <form @submit.prevent="handleAddSponsor">
         <div class="mb-2">
           <label class="form-label">Name</label>
           <input v-model="addName" type="text" class="form-control" required />
@@ -66,7 +66,7 @@
     <div v-if="showEditForm" class="popup-overlay">
       <div class="card p-3 popup">
         <h5>Edit Sponsor</h5>
-        <form @submit.prevent="updateSponsor">
+        <form @submit.prevent="handleUpdateSponsor">
           <div class="mb-2">
             <label class="form-label">Name</label>
             <input v-model="editName" type="text" class="form-control" required />
@@ -93,6 +93,7 @@
           <tr>
             <th class="text-left">Sponsor Name</th>
             <th class="text-left">Sponsor Tier</th>
+            <th class="text-left">Website</th>
           </tr>
           </thead>
           <tbody>
@@ -100,8 +101,9 @@
             <td colspan="3" class="text-center">No sponsors available</td>
           </tr>
           <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
-            <td class="text-center">{{ sponsor.name }}</td>
+            <td class="text-center">{{ sponsor.sponsorName }}</td>
             <td class="text-center">{{ sponsor.tier }}</td>
+            <td class="text-center">{{ sponsor.sponsorWebsite }}</td>
           </tr>
           </tbody>
         </table>
@@ -112,7 +114,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { getSponsors, addSponsor as apiAddSponsor, updateSponsor as apiUpdateSponsor, deleteSponsor as apiDeleteSponsor } from "@/services/sponsorService";
+import { getSponsors, addSponsor, updateSponsor, deleteSponsor } from "@/services/sponsorService";
 
 // List of sponsors
 const sponsors = ref([]);
@@ -120,6 +122,8 @@ const sponsors = ref([]);
 // Form state
 const addName = ref("");
 const addTier = ref("");
+const addWebsite = ref("");
+const addPNG = ref("");
 const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
@@ -130,12 +134,21 @@ const editIndex = ref(null);
 const editId = ref(null);
 const editName = ref("");
 const editTier = ref("");
+const editWebsite = ref("");
+const editPNG = ref("");
 
 // Fetch sponsors on load
 onMounted(async () => {
     try{
         const res = await getSponsors();
-        sponsors.value = Array.isArray(res.data) ? res.data : [];
+        sponsors.value = Array.isArray(res.data)
+          ? res.data.map(s => ({
+              id: s.id,
+              name: s.sponsorName,
+              website: s.sponsorWebsite,
+              tier: s.SponsorTiers?.tierName || "" // adjust based on association
+            }))
+          : [];
     }catch (err){
         console.error("Error fetching sponsors: ", err);
     }
@@ -153,13 +166,20 @@ const toggleRemoveForm = () => {
 };
 
 // Add sponsor
-const addSponsor = async () => {
+const handleAddSponsor = async () => {
   try{
-    await apiAddSponsor({ name: addName.value, tier: addTier.value });
+    await addSponsor({
+        sponsor_name: addName.value,
+        tier: addTier.value,
+        sponsor_website: addWebsite.value,
+        image_id: addPNG.value || null
+     });
     const res = await getSponsors();
-    sponsors.value = res.data;
+    sponsors.value = Array.isArray(res.data) ? res.data : [];
     addName.value = "";
     addTier.value = "";
+    addWebsite.value = "";
+    addPNG.value = "";
     showAddForm.value = false;
   }catch(err){
     console.error("Error adding sponsor: ", err);
@@ -191,10 +211,10 @@ const openEditForm = (index) => {
 };
 
 // Save changes to update sponsor
-const updateSponsor = async () => {
+const handleUpdateSponsor = async () => {
     try{
         if(editIndex.value !== null){
-            await apiUpdateSponsor(editId.value, {
+            await updateSponsor(editId.value, {
                 name: editName.value,
                 tier: editTier.value,
             });
