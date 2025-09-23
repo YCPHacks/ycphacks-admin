@@ -146,7 +146,8 @@ onMounted(async () => {
               id: s.id,
               name: s.sponsorName,
               website: s.sponsorWebsite,
-              tier: s.SponsorTiers?.tierName || "" // adjust based on association
+              tier: s.eventSponsors.map(e => e.tier?.tier).join(", ") || "",
+              image: s.image?.url || ""
             }))
           : [];
     }catch (err){
