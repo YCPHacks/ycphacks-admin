@@ -138,14 +138,15 @@ const editPNG = ref("");
 // Fetch sponsors on load
 onMounted(async () => {
     try{
-        const res = await getSponsors();
+        const eventId = await getCurrentEventId();
+        const res = await getSponsors(eventId);
         sponsors.value = Array.isArray(res.data)
           ? res.data.map(s => ({
               id: s.id,
-              name: s.sponsorName,
-              website: s.sponsorWebsite,
-              tier: (s.EventSponsors || []).map(e => e.SponsorTier?.tier).join(", ") || "",
-              image: s.image?.url || ""
+              name: s.name,
+              website: s.website,
+              tier: s.tier || "",
+              image: s.image || ""
             }))
           : [];
     }catch (err){
@@ -167,20 +168,23 @@ const toggleRemoveForm = () => {
 // Add sponsor
 const handleAddSponsor = async () => {
   try{
+    const eventId = await getCurrentEventId();
+
     await addSponsor({
         sponsor_name: addName.value,
         tier: addTier.value,
         sponsor_website: addWebsite.value,
-        image_id: addPNG.value || null
+        image_id: addPNG.value || null,
+        eventId
      });
-    const res = await getSponsors();
+    const res = await getSponsors(eventId);
     sponsors.value = Array.isArray(res.data)
       ? res.data.map(s => ({
           id: s.id,
-          name: s.sponsorName,
-          website: s.sponsorWebsite,
-          tier: (s.EventSponsors || []).map(e => e.tier?.tier).join(", ") || "",
-          image: s.image?.url || ""
+          name: s.name,
+          website: s.website,
+          tier: s.tier || "",
+          image: s.image || ""
         }))
       : [];
     addName.value = "";
@@ -242,6 +246,11 @@ const cancelEdit = () => {
     editIndex.value = null;
     editId.value = null;
 };
+
+const getCurrentEventId = () => {
+    //return selectedEvent.value.id;
+    return 1;
+}
 </script>
 
 <style scoped>
