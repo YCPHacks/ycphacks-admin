@@ -55,7 +55,7 @@
           <label class="form-label">Name</label>
           <input v-model="removeName" type="text" class="form-control" required />
         </div>
-        <button type="button" class="btn btn-secondary" @click="showAddForm = false">
+        <button type="button" class="btn btn-secondary" @click="showRemoveForm = false">
             Cancel
         </button>
         <button type="submit" class="btn btn-danger">Submit</button>
@@ -144,7 +144,7 @@ onMounted(async () => {
               id: s.id,
               name: s.sponsorName,
               website: s.sponsorWebsite,
-              tier: (s.EventSponsors || []).map(e => e.tier?.tier).join(", ") || "",
+              tier: (s.EventSponsors || []).map(e => e.SponsorTier?.tier).join(", ") || "",
               image: s.image?.url || ""
             }))
           : [];
