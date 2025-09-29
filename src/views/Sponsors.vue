@@ -90,21 +90,19 @@
       <div class="table-responsive">
         <table class="table table-striped table-hover">
           <thead class="thead-light">
-          <tr>
-            <th class="text-left">Sponsor Name</th>
-            <th class="text-left">Sponsor Tier</th>
-            <th class="text-left">Website</th>
-          </tr>
+              <tr>
+                <th class="text-left">Sponsor Name</th>
+                <th class="text-left">Sponsor Tier</th>
+                <th class="text-left">Website</th>
+              </tr>
           </thead>
           <tbody>
-          <tr v-if="sponsors.length === 0">
-            <td colspan="3" class="text-center">No sponsors available</td>
-          </tr>
-          <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
-            <td class="text-center">{{ sponsor.sponsorName }}</td>
-            <td class="text-center">{{ sponsor.tier }}</td>
-            <td class="text-center">{{ sponsor.sponsorWebsite }}</td>
-          </tr>
+              <tr v-if="sponsors.length === 0">
+                <td colspan="3" class="text-center">No sponsors available</td>
+              </tr>
+              <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
+                  <td class="text-center">{{ sponsor.name }}</td>      <td class="text-center">{{ sponsor.tier }}</td>
+                  <td class="text-center">{{ sponsor.website }}</td>    </tr>
           </tbody>
         </table>
       </div>
@@ -146,7 +144,7 @@ onMounted(async () => {
               id: s.id,
               name: s.sponsorName,
               website: s.sponsorWebsite,
-              tier: s.eventSponsors.map(e => e.tier?.tier).join(", ") || "",
+              tier: (s.EventSponsors || []).map(e => e.tier?.tier).join(", ") || "",
               image: s.image?.url || ""
             }))
           : [];
@@ -176,7 +174,15 @@ const handleAddSponsor = async () => {
         image_id: addPNG.value || null
      });
     const res = await getSponsors();
-    sponsors.value = Array.isArray(res.data) ? res.data : [];
+    sponsors.value = Array.isArray(res.data)
+      ? res.data.map(s => ({
+          id: s.id,
+          name: s.sponsorName,
+          website: s.sponsorWebsite,
+          tier: (s.EventSponsors || []).map(e => e.tier?.tier).join(", ") || "",
+          image: s.image?.url || ""
+        }))
+      : [];
     addName.value = "";
     addTier.value = "";
     addWebsite.value = "";
