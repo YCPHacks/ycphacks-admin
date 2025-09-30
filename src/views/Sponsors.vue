@@ -27,8 +27,13 @@
           <input v-model="addName" type="text" class="form-control" required />
         </div>
         <div class="mb-2">
-          <label class="form-label">Tier</label>
-          <input v-model="addTier" type="text" class="form-control" required />
+            <label class="form-label">Tier</label>
+            <select v-model="addTier" class="form-control" required>
+              <option value="" disabled>Select a tier</option>
+              <option v-for="tier in tiers" :key="tier.id" :value="tier.tier">
+                {{ tier.tier }}
+              </option>
+            </select>
         </div>
         <div class="mb-2">
             <label class="form-label">Website URL</label>
@@ -73,7 +78,12 @@
           </div>
           <div class="mb-2">
             <label class="form-label">Tier</label>
-            <input v-model="editTier" type="text" class="form-control" required />
+            <select v-model="addTier" class="form-control" required>
+              <option value="" disabled>Select a tier</option>
+              <option v-for="tier in tiers" :key="tier.id" :value="tier.tier">
+                {{ tier.tier }}
+              </option>
+            </select>
           </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEdit">
@@ -112,10 +122,11 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { getSponsors, addSponsor, updateSponsor, deleteSponsor } from "@/services/sponsorService";
+import { getSponsors, addSponsor, updateSponsor, deleteSponsor, getSponsorTiers } from "@/services/sponsorService";
 
 // List of sponsors
 const sponsors = ref([]);
+const tiers = ref([]);
 
 // Form state
 const addName = ref("");
@@ -140,8 +151,10 @@ onMounted(async () => {
     try{
         const eventId = await getCurrentEventId();
         const res = await getSponsors(eventId);
-        sponsors.value = Array.isArray(res.data)
-          ? res.data.map(s => ({
+
+        const data = res.data || {};
+        sponsors.value = Array.isArray(data.sponsors)
+          ? data.sponsors.map(s => ({
               id: s.id,
               name: s.name,
               website: s.website,
@@ -149,18 +162,28 @@ onMounted(async () => {
               image: s.image || ""
             }))
           : [];
+
+        const resTiers = await getSponsorTiers();
+        tiers.value = Array.isArray(resTiers.tiers) ? resTiers.tiers : [];
     }catch (err){
         console.error("Error fetching sponsors: ", err);
     }
 });
 
 // Toggle forms
-const toggleAddForm = () => {
+const toggleAddForm = async () => {
   showAddForm.value = true;
   showRemoveForm.value = false;
+
+  try{
+    const resTiers = await getSponsorTiers();
+    tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
+  }catch(err){
+    console.error("Error fetching sponsor tiers: ", err);
+  }
 };
 
-const toggleRemoveForm = () => {
+const toggleRemoveForm = async () => {
   showRemoveForm.value = true;
   showAddForm.value = false;
 };
@@ -172,11 +195,12 @@ const handleAddSponsor = async () => {
 
     await addSponsor({
         sponsor_name: addName.value,
-        tier: addTier.value,
+        tier: addTier.value, //dropdown value
         sponsor_website: addWebsite.value,
         image_id: addPNG.value || null,
         eventId
      });
+     //Refreshes the list
     const res = await getSponsors(eventId);
     sponsors.value = Array.isArray(res.data)
       ? res.data.map(s => ({
@@ -212,13 +236,20 @@ const removeSponsor = () => {
 };
 
 // Open edit form
-const openEditForm = (index) => {
+const openEditForm = async (index) => {
     const sponsor = sponsors.value[index];
     editIndex.value = index;
     editId.value = sponsor.id;
     editName.value = sponsor.name;
     editTier.value = sponsor.tier;
     showEditForm.value = true;
+
+     try{
+      const resTiers = await getSponsorTiers();
+      tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
+    }catch(err){
+      console.error("Error fetching sponsor tiers: ", err);
+    }
 };
 
 // Save changes to update sponsor
@@ -227,7 +258,7 @@ const handleUpdateSponsor = async () => {
         if(editIndex.value !== null){
             await updateSponsor(editId.value, {
                 name: editName.value,
-                tier: editTier.value,
+                tier: editTier.value,   //dropdown value
             });
             sponsors[editIndex.value].name = editName.value;
             sponsors[editIndex.value].tier = editTier.value;

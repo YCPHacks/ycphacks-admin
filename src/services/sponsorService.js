@@ -24,3 +24,7 @@ export const updateSponsor = async (id, updates) => {
 export const deleteSponsor = async (id) => {
   return axios.delete(`${API_URL}/${id}`);
 };
+
+export const getSponsorTiers = async () => {
+  return axios.get(`${API_URL}/tiers`);
+}
