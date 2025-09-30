@@ -30,7 +30,7 @@
             <label class="form-label">Tier</label>
             <select v-model="addTier" class="form-control" required>
               <option value="" disabled>Select a tier</option>
-              <option v-for="tier in tiers" :key="tier.id" :value="tier.tier">
+              <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
                 {{ tier.tier }}
               </option>
             </select>
@@ -190,20 +190,22 @@ const toggleRemoveForm = async () => {
 
 // Add sponsor
 const handleAddSponsor = async () => {
-  try{
+  try {
     const eventId = await getCurrentEventId();
 
     await addSponsor({
-        sponsor_name: addName.value,
-        tier: addTier.value, //dropdown value
-        sponsor_website: addWebsite.value,
-        image_id: addPNG.value || null,
-        eventId
-     });
-     //Refreshes the list
+      sponsorName: addName.value,
+      sponsorWebsite: addWebsite.value,
+      image: addPNG.value || null,
+      sponsorTierId: addTier.value,
+      eventId
+    });
+
+    // Re-fetch the sponsors list
     const res = await getSponsors(eventId);
-    sponsors.value = Array.isArray(res.data)
-      ? res.data.map(s => ({
+    const data = res.data?.sponsors || [];
+    sponsors.value = Array.isArray(data)
+      ? data.map(s => ({
           id: s.id,
           name: s.name,
           website: s.website,
@@ -211,12 +213,14 @@ const handleAddSponsor = async () => {
           image: s.image || ""
         }))
       : [];
+
     addName.value = "";
     addTier.value = "";
     addWebsite.value = "";
     addPNG.value = "";
     showAddForm.value = false;
-  }catch(err){
+
+  } catch(err) {
     console.error("Error adding sponsor: ", err);
   }
 };
