@@ -16,7 +16,7 @@ export const addSponsor = async (sponsor) => {
 };
 
 // Update sponsor
-export const updateSponsor = async (id, updates) => {
+export const updateEventSponsor = async (id, updates) => {
   return axios.put(`${API_URL}/${id}`, updates);
 };
 

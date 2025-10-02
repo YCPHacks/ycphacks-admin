@@ -78,12 +78,16 @@
           </div>
           <div class="mb-2">
             <label class="form-label">Tier</label>
-            <select v-model="addTier" class="form-control" required>
+            <select v-model="editTier" class="form-control" required>
               <option value="" disabled>Select a tier</option>
-              <option v-for="tier in tiers" :key="tier.id" :value="tier.tier">
+              <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
                 {{ tier.tier }}
               </option>
             </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Website URL</label>
+            <input v-model="editWebsite" type="text" class="form-control" />
           </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEdit">
@@ -122,11 +126,12 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { getSponsors, addSponsor, updateSponsor, deleteSponsor, getSponsorTiers } from "@/services/sponsorService";
+import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers } from "@/services/sponsorService";
 
 // List of sponsors
 const sponsors = ref([]);
 const tiers = ref([]);
+const currentEventId = ref(null);
 
 // Form state
 const addName = ref("");
@@ -149,22 +154,23 @@ const editPNG = ref("");
 // Fetch sponsors on load
 onMounted(async () => {
     try{
-        const eventId = await getCurrentEventId();
-        const res = await getSponsors(eventId);
+      currentEventId.value = await getCurrentEventId();
+      const eventId = await getCurrentEventId();
+      const res = await getSponsors(eventId);
 
-        const data = res.data || {};
-        sponsors.value = Array.isArray(data.sponsors)
-          ? data.sponsors.map(s => ({
-              id: s.id,
-              name: s.name,
-              website: s.website,
-              tier: s.tier || "",
-              image: s.image || ""
-            }))
-          : [];
+      const data = res.data || {};
+      sponsors.value = Array.isArray(data.sponsors)
+        ? data.sponsors.map(s => ({
+            id: s.id,
+            name: s.name,
+            website: s.website,
+            tier: s.tier || "",
+            image: s.image || ""
+          }))
+        : [];
 
-        const resTiers = await getSponsorTiers();
-        tiers.value = Array.isArray(resTiers.tiers) ? resTiers.tiers : [];
+      const resTiers = await getSponsorTiers();
+      tiers.value = Array.isArray(resTiers.tiers) ? resTiers.tiers : [];
     }catch (err){
         console.error("Error fetching sponsors: ", err);
     }
@@ -198,7 +204,7 @@ const handleAddSponsor = async () => {
       sponsorWebsite: addWebsite.value,
       image: addPNG.value || null,
       sponsorTierId: addTier.value,
-      eventId
+      eventId: currentEventId.value,
     });
 
     // Re-fetch the sponsors list
@@ -245,7 +251,7 @@ const openEditForm = async (index) => {
     editIndex.value = index;
     editId.value = sponsor.id;
     editName.value = sponsor.name;
-    editTier.value = sponsor.tier;
+    editTier.value = tiers.value.find(t => t.tier === sponsor.tier)?.id || "";
     showEditForm.value = true;
 
      try{
@@ -260,12 +266,35 @@ const openEditForm = async (index) => {
 const handleUpdateSponsor = async () => {
     try{
         if(editIndex.value !== null){
-            await updateSponsor(editId.value, {
-                name: editName.value,
-                tier: editTier.value,   //dropdown value
-            });
-            sponsors[editIndex.value].name = editName.value;
-            sponsors[editIndex.value].tier = editTier.value;
+          console.log("Updating sponsor with:", {
+            editId: editId.value,
+            sponsorName: editName.value,
+            sponsorWebsite: editWebsite.value,
+            image: editPNG.value || null,
+            sponsorTierId: editTier.value,
+            eventId: currentEventId.value,
+          });
+
+          await updateEventSponsor(editId.value, {
+              sponsorName: editName.value,
+              sponsorWebsite: editWebsite.value,
+              image: editPNG.value || null,
+              sponsorTierId: editTier.value ,  //dropdown value
+              eventId: currentEventId.value,
+          });
+
+          console.log({
+            editId: editId.value,
+            sponsorName: editName.value,
+            sponsorWebsite: editWebsite.value,
+            image: editPNG.value || null,
+            sponsorTierId: editTier.value
+          });
+
+          sponsors.value[editIndex.value].name = editName.value;
+          sponsors.value[editIndex.value].website = editWebsite.value;
+          sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
+          sponsors.value[editIndex.value].image = editPNG.value || "";
         }
         showEditForm.value = false;
         editIndex.value = null;
