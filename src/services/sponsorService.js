@@ -21,8 +21,8 @@ export const updateEventSponsor = async (id, updates) => {
 };
 
 // Delete sponsor
-export const deleteSponsor = async (id) => {
-  return axios.delete(`${API_URL}/${id}`);
+export const deleteSponsor = async (sponsorId, eventId) => {
+  return axios.delete(`${API_URL}/${sponsorId}?eventId=${eventId}`);
 };
 
 export const getSponsorTiers = async () => {

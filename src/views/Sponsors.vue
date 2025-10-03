@@ -232,17 +232,36 @@ const handleAddSponsor = async () => {
 };
 
 // Remove sponsor
-const removeSponsor = () => {
-  try{
-    const index = sponsors.findIndex((s) => s.name === removeName.value);
-    if (index !== -1) {
-      sponsors.splice(index, 1);
-    }
-    removeName.value = "";
-    showRemoveForm.value = false; // hide form after submit
-  }catch(err){
-    console.error("Error removing sponsor: ", err);
+const removeSponsor = async () => {
+  const SponsorToRemove = sponsors.value.find((s) => s.name === removeName.value);
+
+  if(!SponsorToRemove){
+    console.warn(`Sponsor with name "${removeName.value}" not found of is missing an ID.`);
+    return;
   }
+
+  console.log("Found Sponsor Object: ", SponsorToRemove);
+
+  const idToDelete = SponsorToRemove.id;
+  const eventId = getCurrentEventId();
+  console.log("eventId: ", eventId);
+  console.log("idToDelete: ", idToDelete);
+
+  if(!idToDelete){
+    console.error("The selected sponsor object is missing the required deleteion ID.")
+    return;
+  }
+
+  await deleteSponsor(idToDelete, eventId);
+  console.log("Sponsor Deleted")
+
+  const index = sponsors.value.findIndex((s) => s.id === idToDelete);
+  if(index !== -1){
+    sponsors.value.splice(index, 1);
+  }
+
+  removeName.value = "";
+  showRemoveForm.value = false;
 };
 
 // Open edit form
