@@ -22,6 +22,9 @@
     <div v-if="showAddForm" class="card p-3 mb-3">
       <h5>Add Sponsor</h5>
       <form @submit.prevent="handleAddSponsor">
+        <div v-if="addFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
+        </div>
         <div class="mb-2">
           <label class="form-label">Name</label>
           <input v-model="addName" type="text" class="form-control" required />
@@ -44,7 +47,7 @@
             <input v-model="addPNG" type="text" class="form-control" />
         </div>
         <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary" @click="showAddForm = false">
+            <button type="button" class="btn btn-secondary" @click="cancelAdd">
                 Cancel
             </button>
             <button type="submit" class="btn btn-success">Submit</button>
@@ -56,11 +59,14 @@
     <div v-if="showRemoveForm" class="card p-3 mb-3">
       <h5>Remove Sponsor</h5>
       <form @submit.prevent="removeSponsor">
+        <div v-if="removeFormError" class="alert alert-danger p-2 mb-3" role="alert">
+          <i class="bi bi-exclamation-triangle-fill"></i> {{ removeFormError }}
+        </div>
         <div class="mb-2">
           <label class="form-label">Name</label>
           <input v-model="removeName" type="text" class="form-control" required />
         </div>
-        <button type="button" class="btn btn-secondary" @click="showRemoveForm = false">
+        <button type="button" class="btn btn-secondary" @click="cancelRemove">
             Cancel
         </button>
         <button type="submit" class="btn btn-danger">Submit</button>
@@ -72,6 +78,9 @@
       <div class="card p-3 popup">
         <h5>Edit Sponsor</h5>
         <form @submit.prevent="handleUpdateSponsor">
+          <div v-if="editFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ editFormError }}
+          </div>
           <div class="mb-2">
             <label class="form-label">Name</label>
             <input v-model="editName" type="text" class="form-control" required />
@@ -142,6 +151,11 @@ const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
 
+// Error State Variables
+const addFormError = ref(null);
+const editFormError = ref(null);
+const removeFormError = ref(null);
+
 // Edit sponsor state
 const showEditForm = ref(false);
 const editIndex = ref(null);
@@ -150,6 +164,18 @@ const editName = ref("");
 const editTier = ref("");
 const editWebsite = ref("");
 const editPNG = ref("");
+
+// Validate Characters
+const validateName = (name) => {
+  // Regex updated to allow common characters like '&' (ampersand) and '.' (period).
+  // It restricts characters commonly used in scripting or database injection ($ # @ % ^ ( ) + = !).
+  // This will allow Greek letters and other Unicode characters.
+  const restrictedChars = /[#$@%^()+=!]/; 
+  if (restrictedChars.test(name)) {
+    return "Sponsor Name contains restricted characters ($ # @ % ^ ( ) + = !). Please remove them.";
+  }
+  return null;
+};
 
 // Fetch sponsors on load
 onMounted(async () => {
@@ -180,6 +206,7 @@ onMounted(async () => {
 const toggleAddForm = async () => {
   showAddForm.value = true;
   showRemoveForm.value = false;
+  addFormError.value = null;
 
   try{
     const resTiers = await getSponsorTiers();
@@ -192,10 +219,30 @@ const toggleAddForm = async () => {
 const toggleRemoveForm = async () => {
   showRemoveForm.value = true;
   showAddForm.value = false;
+  removeFormError.value = null;
 };
+
+const cancelAdd = () => {
+  showAddForm.value = false;
+  addFormError.value = null;
+}
+
+const cancelRemove = () => {
+    showRemoveForm.value = false;
+    removeFormError.value = null;
+    removeName.value = "";
+}
 
 // Add sponsor
 const handleAddSponsor = async () => {
+  addFormError.value = null;
+
+  const validationMessage = validateName(addName.value);
+  if (validationMessage) {
+      addFormError.value = validationMessage;
+      return;
+  }
+
   try {
     const eventId = await getCurrentEventId();
 
@@ -227,41 +274,45 @@ const handleAddSponsor = async () => {
     showAddForm.value = false;
 
   } catch(err) {
-    console.error("Error adding sponsor: ", err);
+    // console.error("Error adding sponsor: ", err);
+    const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred.";
+    addFormError.value = errorMessage;
   }
 };
 
 // Remove sponsor
 const removeSponsor = async () => {
+  removeFormError.value = null;
+
   const SponsorToRemove = sponsors.value.find((s) => s.name === removeName.value);
 
   if(!SponsorToRemove){
-    console.warn(`Sponsor with name "${removeName.value}" not found of is missing an ID.`);
+    // console.warn(`Sponsor with name "${removeName.value}" not found of is missing an ID.`);
+    removeFormError.value = `Sponsor named "${removeName.value}" was not found. Please check the spelling.`;
     return;
   }
 
-  console.log("Found Sponsor Object: ", SponsorToRemove);
-
-  const idToDelete = SponsorToRemove.id;
-  const eventId = getCurrentEventId();
-  console.log("eventId: ", eventId);
-  console.log("idToDelete: ", idToDelete);
-
-  if(!idToDelete){
-    console.error("The selected sponsor object is missing the required deleteion ID.")
-    return;
+  try {
+    // console.log("Found Sponsor Object: ", SponsorToRemove);
+    // console.log("eventId: ", eventId);
+    // console.log("idToDelete: ", idToDelete);
+  
+    await deleteSponsor(idToDelete, eventId);
+    // console.log("Sponsor Deleted")
+  
+    const index = sponsors.value.findIndex((s) => s.id === idToDelete);
+    if(index !== -1){
+      sponsors.value.splice(index, 1);
+    }
+  
+    removeName.value = "";
+    showRemoveForm.value = false;
+  } catch (err) {
+      // console.error("Error deleting sponsor: ", err);
+      // 3. Handle API error (server-side check)
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor due to a network or server error.";
+      removeFormError.value = errorMessage;
   }
-
-  await deleteSponsor(idToDelete, eventId);
-  console.log("Sponsor Deleted")
-
-  const index = sponsors.value.findIndex((s) => s.id === idToDelete);
-  if(index !== -1){
-    sponsors.value.splice(index, 1);
-  }
-
-  removeName.value = "";
-  showRemoveForm.value = false;
 };
 
 // Open edit form
@@ -272,6 +323,7 @@ const openEditForm = async (index) => {
     editName.value = sponsor.name;
     editTier.value = tiers.value.find(t => t.tier === sponsor.tier)?.id || "";
     showEditForm.value = true;
+    editFormError.value = null;
 
      try{
       const resTiers = await getSponsorTiers();
@@ -283,44 +335,52 @@ const openEditForm = async (index) => {
 
 // Save changes to update sponsor
 const handleUpdateSponsor = async () => {
-    try{
-        if(editIndex.value !== null){
-          console.log("Updating sponsor with:", {
-            editId: editId.value,
+  editFormError.value = null;
+
+  const validationMessage = validateName(editName.value);
+  if (validationMessage) {
+      editFormError.value = validationMessage;
+      return;
+  }
+  try{
+      if(editIndex.value !== null){
+        console.log("Updating sponsor with:", {
+          editId: editId.value,
+          sponsorName: editName.value,
+          sponsorWebsite: editWebsite.value,
+          image: editPNG.value || null,
+          sponsorTierId: editTier.value,
+          eventId: currentEventId.value,
+        });
+
+        await updateEventSponsor(editId.value, {
             sponsorName: editName.value,
             sponsorWebsite: editWebsite.value,
             image: editPNG.value || null,
-            sponsorTierId: editTier.value,
+            sponsorTierId: editTier.value ,  //dropdown value
             eventId: currentEventId.value,
-          });
+        });
 
-          await updateEventSponsor(editId.value, {
-              sponsorName: editName.value,
-              sponsorWebsite: editWebsite.value,
-              image: editPNG.value || null,
-              sponsorTierId: editTier.value ,  //dropdown value
-              eventId: currentEventId.value,
-          });
+        console.log({
+          editId: editId.value,
+          sponsorName: editName.value,
+          sponsorWebsite: editWebsite.value,
+          image: editPNG.value || null,
+          sponsorTierId: editTier.value
+        });
 
-          console.log({
-            editId: editId.value,
-            sponsorName: editName.value,
-            sponsorWebsite: editWebsite.value,
-            image: editPNG.value || null,
-            sponsorTierId: editTier.value
-          });
-
-          sponsors.value[editIndex.value].name = editName.value;
-          sponsors.value[editIndex.value].website = editWebsite.value;
-          sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
-          sponsors.value[editIndex.value].image = editPNG.value || "";
-        }
-        showEditForm.value = false;
-        editIndex.value = null;
-        editId.value = null;
-    }catch (err){
-        console.error("Error updating sponsor: ", err);
-    }
+        sponsors.value[editIndex.value].name = editName.value;
+        sponsors.value[editIndex.value].website = editWebsite.value;
+        sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
+        sponsors.value[editIndex.value].image = editPNG.value || "";
+      }
+      showEditForm.value = false;
+      editIndex.value = null;
+      editId.value = null;
+  }catch (err){
+    // console.error("Error updating sponsor: ", err);const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during update.";
+    editFormError.value = errorMessage;
+  }
 };
 
 // Cancel Edit
@@ -328,6 +388,7 @@ const cancelEdit = () => {
     showEditForm.value = false;
     editIndex.value = null;
     editId.value = null;
+    editFormError.value = null;
 };
 
 const getCurrentEventId = () => {
@@ -337,6 +398,13 @@ const getCurrentEventId = () => {
 </script>
 
 <style scoped>
+.alert-danger {
+    color: #842029;
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+    border-radius: 0.5rem;
+}
+
 .container {
   max-width: 100%;
   position: relative;

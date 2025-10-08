@@ -36,7 +36,7 @@ export default {
         email: this.email,
         password: this.password,
       };
-      console.log(formData)
+      // console.log(formData)
       try{
         await this.loginAdminUser(formData);
         this.$router.push('/dashboard');
