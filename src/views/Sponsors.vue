@@ -167,14 +167,65 @@ const editPNG = ref("");
 
 // Validate Characters
 const validateName = (name) => {
-  // Regex updated to allow common characters like '&' (ampersand) and '.' (period).
-  // It restricts characters commonly used in scripting or database injection ($ # @ % ^ ( ) + = !).
-  // This will allow Greek letters and other Unicode characters.
-  const restrictedChars = /[#$@%^()+=!]/; 
-  if (restrictedChars.test(name)) {
-    return "Sponsor Name contains restricted characters ($ # @ % ^ ( ) + = !). Please remove them.";
+  // Regex restricts input to standard keyboard characters: 
+  // letters (a-z), numbers (0-9), space (\s), and common punctuation in company names.
+  // The 'i' flag makes it case-insensitive (a-zA-Z).
+  const allowedChars = /^[a-zA-Z0-9\s\-.()'&!@#$%,]+$/; 
+  
+  // If the name is empty, we let the 'required' attribute handle it.
+  if (!name) return null;
+
+  if (!allowedChars.test(name)) {
+    return "Sponsor Name contains restricted characters. Please use only standard letters, numbers, spaces, and common symbols (e.g., -, ., ', &, @, #).";
   }
   return null;
+};
+
+const validateUrl = (url) => {
+  const trimmedUrl = url ? url.trim() : '';
+
+  // Allow empty string (since URL is not required)
+  if (!trimmedUrl) return null; 
+
+  // 1. Protocol Check: Must start with http:// or https://
+  // The 'i' flag makes it case-insensitive.
+  const protocolRegex = /^(http|https):\/\//i;
+  if (!protocolRegex.test(trimmedUrl)) {
+    return "URL must start with 'http://' or 'https://'.";
+  }
+
+  return null;
+};
+
+const transformUrlForServer = (url) => {
+    if (!url) return null;
+    let transformed = url.trim();
+
+    // The backend only allows: a-zA-Z0-9\s-',.
+    // We use safe letter sequences (all caps) to represent blocked characters.
+    transformed = transformed.replace(/:/g, 'DOTC');         // Colon: (e.g., in http:)
+    transformed = transformed.replace(/\//g, 'DOTS');         // Slash: /
+    transformed = transformed.replace(/\?/g, 'DOTQ');         // Question mark: ?
+    transformed = transformed.replace(/=/g, 'DOTE');         // Equals sign: =
+    transformed = transformed.replace(/&/g, 'DOTA');         // Ampersand: &
+    
+    // Spaces are allowed by the backend regex but should not be in a URL, so we keep them for now,
+    // assuming client-side validation handles invalid URL formats.
+
+    return transformed;
+};
+
+const revertUrlFromServer = (transformedUrl) => {
+    if (!transformedUrl) return "";
+    let original = transformedUrl.trim();
+
+    original = original.replace(/DOTC/g, ':');
+    original = original.replace(/DOTS/g, '/');
+    original = original.replace(/DOTQ/g, '?');
+    original = original.replace(/DOTE/g, '=');
+    original = original.replace(/DOTA/g, '&');
+    
+    return original;
 };
 
 // Fetch sponsors on load
@@ -189,7 +240,7 @@ onMounted(async () => {
         ? data.sponsors.map(s => ({
             id: s.id,
             name: s.name,
-            website: s.website,
+            website: revertUrlFromServer(s.website),
             tier: s.tier || "",
             image: s.image || ""
           }))
@@ -243,12 +294,20 @@ const handleAddSponsor = async () => {
       return;
   }
 
+  const urlValidationMessage = validateUrl(addWebsite.value);
+  if(urlValidationMessage){
+    addFormError.value = urlValidationMessage;
+    return;
+  }
+
+  const transformedWebsite = transformUrlForServer(addWebsite.value);
+
   try {
     const eventId = await getCurrentEventId();
 
     await addSponsor({
       sponsorName: addName.value,
-      sponsorWebsite: addWebsite.value,
+      sponsorWebsite: transformedWebsite,
       image: addPNG.value || null,
       sponsorTierId: addTier.value,
       eventId: currentEventId.value,
@@ -261,7 +320,7 @@ const handleAddSponsor = async () => {
       ? data.map(s => ({
           id: s.id,
           name: s.name,
-          website: s.website,
+          website: revertUrlFromServer(s.website),
           tier: s.tier || "",
           image: s.image || ""
         }))
@@ -342,12 +401,21 @@ const handleUpdateSponsor = async () => {
       editFormError.value = validationMessage;
       return;
   }
+
+  const urlValidationMessage = validateUrl(editWebsite.value);
+  if(urlValidationMessage){
+    editFormError.value = urlValidationMessage;
+    return;
+  }
+
+  const transformedWebsite = transformUrlForServer(editWebsite.value);
+
   try{
       if(editIndex.value !== null){
         console.log("Updating sponsor with:", {
           editId: editId.value,
           sponsorName: editName.value,
-          sponsorWebsite: editWebsite.value,
+          sponsorWebsite: transformedWebsite,
           image: editPNG.value || null,
           sponsorTierId: editTier.value,
           eventId: currentEventId.value,
