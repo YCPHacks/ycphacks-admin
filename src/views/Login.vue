@@ -31,13 +31,19 @@ export default {
   },
   methods: {
     ...mapActions(['loginAdminUser']),
-    handleSubmit() {
+    async handleSubmit() {
       const formData = {
         email: this.email,
         password: this.password,
       };
-      console.log(formData)
-      this.loginAdminUser(formData);
+      // console.log(formData)
+      try{
+        await this.loginAdminUser(formData);
+        this.$router.push('/dashboard');
+        console.log("Now on Dashboard");
+      }catch(err){
+        console.error("Login Failed: ", err);
+      }
     },
   },
   created() {

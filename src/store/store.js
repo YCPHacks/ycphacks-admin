@@ -1,11 +1,12 @@
 import {createStore} from 'vuex';
 import axios from "axios";
 import router from '../router/index.js';
-import UserAdapter from "./UserAdapter";
+import UserAdapter from "./UserAdapter.js";
 
 export default createStore({
     state: {
         user: {},
+        sponsors: []
     },
     mutations: {
         setUser(state, user) {
@@ -13,12 +14,18 @@ export default createStore({
             // if the user has been set it's assumed to be safe to navigate to the dashboard
             router.push('/')
         },
+        clearUser(state){
+            state.user = null
+        },
+        setSponsors(state, sponsors){
+            state.sponsors = sponsors;
+        }
     },
     actions: {
         async loginAdminUser({commit}, formData) {
             try {
                 const loginData = {
-                    email: formData.email,
+                                            email: formData.email,
                     password: formData.password
                 }
 
@@ -41,8 +48,9 @@ export default createStore({
                 const token = {
                     token: document.cookie.split('; ').find(row => row.startsWith('token=')).split('=')[1]
                 }
+                if (!token) return;
 
-                const response = await axios.post("http://localhost:3000/user/auth", token, {
+                const response = await axios.post("http://localhost:3000/user/auth", {token}, {
                     headers: {
                         "Content-Type": "application/json",
                     },
@@ -57,9 +65,22 @@ export default createStore({
             }
         },
         async logout({commit}) {
-            commit("setUser", {});
+            commit("clearUser");
             document.cookie = `token=; path=/;`;
+            router.push("/login");
+        },
+        async getAllSponsors({commit}){
+            try{
+                const response = await axios.get("http://localhost:3000/sponsor/all");
+                commit("setSponsors", response.data);
+            }catch(err){
+                console.error("Error fetching sponsors: ", err);
+            }
         }
     },
-    getters: {},
+    getters: {
+        isAuthenticated: (state) => !!state.user,
+        UserRole: (state) => state.user?.role || null,
+        allSponsors: (state) => state.sponsors
+    },
 });
