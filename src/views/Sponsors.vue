@@ -345,7 +345,7 @@ const removeSponsor = async () => {
 
   const SponsorToRemove = sponsors.value.find((s) => s.name === removeName.value);
 
-  if(!SponsorToRemove){
+  if(!SponsorToRemove || !SponsorToRemove.id){
     // console.warn(`Sponsor with name "${removeName.value}" not found of is missing an ID.`);
     removeFormError.value = `Sponsor named "${removeName.value}" was not found. Please check the spelling.`;
     return;
@@ -355,6 +355,8 @@ const removeSponsor = async () => {
     // console.log("Found Sponsor Object: ", SponsorToRemove);
     // console.log("eventId: ", eventId);
     // console.log("idToDelete: ", idToDelete);
+    const idToDelete = SponsorToRemove.id;
+    const eventId = await getCurrentEventId();
   
     await deleteSponsor(idToDelete, eventId);
     // console.log("Sponsor Deleted")
