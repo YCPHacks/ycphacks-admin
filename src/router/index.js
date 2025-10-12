@@ -31,16 +31,31 @@ const router = createRouter({
     routes,
 });
 
-router.beforeEach((to, from, next) => {
-    const UserRole = store.state.user?.role;
-    const isAuthenticated = UserRole === 'staff' || UserRole === 'oscar';
-    if (to.path === '/login') {
-        next();
-    } else if (!isAuthenticated) {
-        next('/login');
-    } else {
-        next();
+router.beforeEach(async (to, from, next) => {
+    const userRole = store.state.user?.role;
+    const hasPermissions = userRole === 'staff' || userRole === 'oscar';
+
+    let isAuthenticated = !!store.state.user;
+    if (!isAuthenticated) {
+        const result = await store.dispatch('validateWithToken');
+        isAuthenticated = result.success;
     }
+
+    // Allow routing to login if NOT authenticated
+    if (to.path === '/login') {
+        if (isAuthenticated && hasPermissions) {
+            return next('/dashboard'); // already logged in, redirect away
+        } else {
+            return next(); // allow login page
+        }
+    }
+
+    // For all other routes that require auth
+    if (!isAuthenticated || !hasPermissions) {
+        return next('/login'); // redirect to login
+    }
+
+    next(); // allow route
 });
 
 export default router;

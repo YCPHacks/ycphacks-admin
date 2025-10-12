@@ -25,7 +25,7 @@ export default createStore({
         async loginAdminUser({commit}, formData) {
             try {
                 const loginData = {
-                                            email: formData.email,
+                    email: formData.email,
                     password: formData.password
                 }
 
@@ -35,12 +35,14 @@ export default createStore({
                     },
                 });
 
-                const data = await response.data;
+                const data = response.data;
                 const user = new UserAdapter(data.data)
                 commit("setUser", user);
+
                 document.cookie = `token=${user.token}; path=/;`;
+                return { success: true, message: data.message }
             } catch (error) {
-                console.error("Login failed:", error);
+                return { success: false, message: error.response?.data?.message || "Login Failed" };
             }
         },
         async validateWithToken({commit}) {
@@ -48,7 +50,8 @@ export default createStore({
                 const token = {
                     token: document.cookie.split('; ').find(row => row.startsWith('token=')).split('=')[1]
                 }
-                if (!token) return;
+
+                if (!token) return { success: false, message: "No token found"};
 
                 const response = await axios.post("http://localhost:3000/user/auth", {token}, {
                     headers: {
@@ -57,11 +60,12 @@ export default createStore({
                 });
 
                 const data = await response.data;
-                const user = new UserAdapter(data.data)
-
+                const user = new UserAdapter(data.data);
                 commit("setUser", user);
+
+                return { success: true, message: data.message };
             } catch (error) {
-                console.error("Login failed:", error);
+                return { success: false, message: error.response?.data?.message || "Authentication failed" };
             }
         },
         async logout({commit}) {
