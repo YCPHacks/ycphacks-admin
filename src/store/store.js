@@ -1,4 +1,4 @@
-import {createStore} from 'vuex';
+import {createStore, mapGetters} from 'vuex';
 import axios from "axios";
 import router from '../router/index.js';
 import UserAdapter from "./UserAdapter.js";

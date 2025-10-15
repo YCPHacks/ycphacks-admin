@@ -11,7 +11,7 @@
         </div>
 
         <!-- Remove Sponsor Button -->
-        <div class="text-end mb-3">
+        <div v-if="isOscar" class="text-end mb-3">
             <button class="btn btn-primary" @click="toggleRemoveForm">
                 Remove Sponsor
             </button>
@@ -56,7 +56,7 @@
     </div>
 
     <!-- Remove Sponsor Form -->
-    <div v-if="showRemoveForm" class="card p-3 mb-3">
+    <div v-if="showRemoveForm && isOscar" class="card p-3 mb-3">
       <h5>Remove Sponsor</h5>
       <form @submit.prevent="removeSponsor">
         <div v-if="removeFormError" class="alert alert-danger p-2 mb-3" role="alert">
@@ -134,8 +134,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers } from "@/services/sponsorService";
+import { useStore, mapGetters } from 'vuex';
 
 // List of sponsors
 const sponsors = ref([]);
@@ -227,6 +228,13 @@ const revertUrlFromServer = (transformedUrl) => {
     
     return original;
 };
+
+const store = useStore();
+
+// Checks if the user is oscar level
+const isOscar = computed(() => {
+    return store.getters.UserRole === 'oscar'; 
+});
 
 // Fetch sponsors on load
 onMounted(async () => {
