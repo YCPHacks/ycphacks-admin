@@ -108,6 +108,29 @@
       </div>
     </div>
 
+    <h3 class="mb-3">Sponsor Tiers & Ranges</h3>
+    <div class="table-container shadow-lg rounded overflow-hidden">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="thead-light">
+            <tr>
+              <th class="text-left">Tier Name</th>
+              <th class="text-left">Donation Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="tierRanges.length === 0">
+              <td colspan="2" class="alert alert-info p-2 text-center">No tiers defined</td>
+            </tr>
+            <tr v-for="tierData in tierRanges" :key="tierData.id">
+              <td class="text-center">{{ tierData.tier }}</td>
+              <td class="text-center">{{ tierData.range }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
       <div class="table-responsive">
@@ -121,7 +144,7 @@
           </thead>
           <tbody>
               <tr v-if="sponsors.length === 0">
-                <td colspan="3" class="text-center">No sponsors available</td>
+                <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
               </tr>
               <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
                   <td class="text-center">{{ sponsor.name }}</td>      <td class="text-center">{{ sponsor.tier }}</td>
@@ -236,6 +259,49 @@ const isOscar = computed(() => {
     return store.getters.UserRole === 'oscar'; 
 });
 
+const formatCurrency = (amount) => {
+  // Assuming amount is a number or can be converted to one
+  return new Intl.NumberFormat('en-US', { 
+    style: 'currency', 
+    currency: 'USD',
+    minimumFractionDigits: 0, // No cents needed for thresholds
+  }).format(amount);
+};
+
+const tierRanges = computed(() => {
+  const sortedTiers = [...tiers.value].sort((a, b) => a.lower_threshold - b.lower_threshold);
+
+  const result = [];
+
+  for (let i = 0; i < sortedTiers.length; i++) {
+    const currentTier = sortedTiers[i];
+    const nextTier = sortedTiers[i + 1];
+    
+    // Use the camelCase property name: lowerThreshold
+    const lower = Number(currentTier.lowerThreshold); 
+    
+    let higherThreshold;
+
+    if (nextTier) {
+        // Upper limit is $1 less than the next tier's starting point
+        // Use nextTier.lowerThreshold
+        higherThreshold = formatCurrency(Number(nextTier.lowerThreshold) - 1);
+    } else {
+        // Highest tier: show "and up"
+        higherThreshold = 'and up';
+    }
+
+    const lowerThreshold = formatCurrency(lower);
+
+    result.push({
+        tier: currentTier.tier,
+        range: `${lowerThreshold} - ${higherThreshold}`,
+        id: currentTier.id, 
+    });
+  }
+  return result;
+});
+
 // Fetch sponsors on load
 onMounted(async () => {
     try{
@@ -255,7 +321,7 @@ onMounted(async () => {
         : [];
 
       const resTiers = await getSponsorTiers();
-      tiers.value = Array.isArray(resTiers.tiers) ? resTiers.tiers : [];
+      tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
     }catch (err){
         console.error("Error fetching sponsors: ", err);
     }
