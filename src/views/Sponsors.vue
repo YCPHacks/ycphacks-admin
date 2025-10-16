@@ -353,7 +353,16 @@ const formatCurrency = (amount) => {
 };
 
 const tierRanges = computed(() => {
-  const sortedTiers = [...tiers.value].sort((a, b) => a.lower_threshold - b.lower_threshold);
+  if (!tiers.value || tiers.value.length === 0) {
+    return [];
+  }
+
+  const sortedTiers = [...tiers.value].sort((a, b) => {
+    const aValue = Number(a.lowerThreshold || 0); 
+    const bValue = Number(b.lowerThreshold || 0);
+    
+    return aValue - bValue; 
+  });
 
   const result = [];
 
@@ -361,26 +370,25 @@ const tierRanges = computed(() => {
     const currentTier = sortedTiers[i];
     const nextTier = sortedTiers[i + 1];
     
-    // Use the camelCase property name: lowerThreshold
-    const lower = Number(currentTier.lowerThreshold); 
+    // Lower boundary of the current range
+    const lower = Number(currentTier.lowerThreshold || 0); 
     
     let higherThreshold;
 
     if (nextTier) {
-        // Upper limit is $1 less than the next tier's starting point
-        // Use nextTier.lowerThreshold
-        higherThreshold = formatCurrency(Number(nextTier.lowerThreshold) - 1);
+      const nextLower = Number(nextTier.lowerThreshold || 0);
+      higherThreshold = formatCurrency(nextLower - 1);
     } else {
-        // Highest tier: show "and up"
-        higherThreshold = 'and up';
+      // Highest tier range
+      higherThreshold = 'and up';
     }
 
     const lowerThreshold = formatCurrency(lower);
 
     result.push({
-        tier: currentTier.tier,
-        range: `${lowerThreshold} - ${higherThreshold}`,
-        id: currentTier.id, 
+      tier: currentTier.tier,
+      range: `${lowerThreshold} - ${higherThreshold}`, 
+      id: currentTier.id, 
     });
   }
   return result;
