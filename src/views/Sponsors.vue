@@ -108,49 +108,60 @@
       </div>
     </div>
 
-    <h3 class="mb-3">Sponsor Tiers & Ranges</h3>
-    <div class="table-container shadow-lg rounded overflow-hidden">
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead class="thead-light">
-            <tr>
-              <th class="text-left">Tier Name</th>
-              <th class="text-left">Donation Range</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="tierRanges.length === 0">
-              <td colspan="2" class="alert alert-info p-2 text-center">No tiers defined</td>
-            </tr>
-            <tr v-for="tierData in tierRanges" :key="tierData.id">
-              <td class="text-center">{{ tierData.tier }}</td>
-              <td class="text-center">{{ tierData.range }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <div class="row mt-4">
 
-    <!-- Table Section -->
-    <div class="table-container shadow-lg rounded overflow-hidden">
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead class="thead-light">
-              <tr>
-                <th class="text-left">Sponsor Name</th>
-                <th class="text-left">Sponsor Tier</th>
-                <th class="text-left">Website</th>
-              </tr>
-          </thead>
-          <tbody>
-              <tr v-if="sponsors.length === 0">
-                <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
-              </tr>
-              <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
-                  <td class="text-center">{{ sponsor.name }}</td>      <td class="text-center">{{ sponsor.tier }}</td>
-                  <td class="text-center">{{ sponsor.website }}</td>    </tr>
-          </tbody>
-        </table>
+      <div class="col-md-4 mb-4"> 
+          <h4 class="mb-3">Tier Ranges</h4>
+          
+          <div class="table-container shadow-lg rounded overflow-hidden">
+            <div class="table-responsive">
+              <table class="table table-striped table-hover">
+                <thead class="thead-light">
+                  <tr>
+                    <th class="text-left">Tier Name</th>
+                    <th class="text-left">Donation Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="tierRanges.length === 0">
+                    <td colspan="2" class="alert alert-info p-2 text-center">No tiers defined</td>
+                  </tr>
+                  <tr v-for="tierData in tierRanges" :key="tierData.id">
+                    <td class="text-center">{{ tierData.tier }}</td>
+                    <td class="text-center">{{ tierData.range }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+        </div>
+      </div>
+
+      <div class="col-md-8 mb-4">
+        <h4 class="mb-3">Sponsors List</h4>
+        
+        <div class="table-container shadow-lg rounded overflow-hidden">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="thead-light">
+                <tr>
+                  <th class="text-left">Sponsor Name</th>
+                  <th class="text-left">Sponsor Tier</th>
+                  <th class="text-left">Website</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="sponsors.length === 0">
+                  <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
+                </tr>
+                <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
+                  <td class="text-center">{{ sponsor.name }}</td>
+                  <td class="text-center">{{ sponsor.tier }}</td>
+                  <td class="text-center">{{ sponsor.website }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -558,14 +569,9 @@ const getCurrentEventId = () => {
   border-radius: 0.75rem;
 }
 
-.table-responsive {
-  overflow-x: auto;
-}
-
 .table {
   margin: 0;
   font-size: 0.875rem;
-  min-width: 600px;
 }
 
 .thead-light th {
@@ -630,4 +636,11 @@ const getCurrentEventId = () => {
   max-width: 400px;
   width: 100%;
 }
+
+.col-md-9 .table tbody tr td:nth-child(3){
+  word-break: break-all;
+  max-width: 200px;
+  text-align: left !important;
+}
+
 </style>
