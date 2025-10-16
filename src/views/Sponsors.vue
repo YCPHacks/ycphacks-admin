@@ -3,74 +3,139 @@
     <h2 class="mb-4 text-center">Our Sponsors</h2>
 
     <div class="d-flex justify-content-end gap-2 mb-3">
-        <!-- Add Sponsor Button -->
-        <div class="text-end mb-3">
-          <button class="btn btn-primary" @click="toggleAddForm">
-            Add Sponsor
-          </button>
-        </div>
+      <!-- Add Sponsor Tier Button -->
+      <div v-if="isOscar" class="text-end mb-3">
+        <button class="btn btn-primary" @click="toggleAddTierForm">
+          Add Sponsor Tier
+        </button>
+      </div>
 
-        <!-- Remove Sponsor Button -->
-        <div v-if="isOscar" class="text-end mb-3">
-            <button class="btn btn-primary" @click="toggleRemoveForm">
-                Remove Sponsor
+      <!-- Remove Sponsor Tier Button -->
+      <div v-if="isOscar" class="text-end mb-3">
+        <button class="btn btn-primary">
+          Remove Sponsor Tier
+        </button>
+      </div>
+
+      <!-- Add Sponsor Button -->
+      <div class="text-end mb-3">
+        <button class="btn btn-primary" @click="toggleAddForm">
+          Add Sponsor
+        </button>
+      </div>
+
+      <!-- Remove Sponsor Button -->
+      <div v-if="isOscar" class="text-end mb-3">
+        <button class="btn btn-primary" @click="toggleRemoveForm">
+          Remove Sponsor
+        </button>
+      </div>
+    </div>
+
+    <!-- Add Sponsor Tier Form -->
+    <div v-if="showAddTierForm" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Add Sponsor Tier</h5>
+        <form @submit.prevent="handleAddTier">
+          <div v-if="addTierFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ addTierFormError }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="addTierName" type="text" class="form-control" required/>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Lower Threshold</label>
+            <input v-model="addLowerThreshold" type="number" class="form-control" required/>
+          </div>
+          <!-- <div class="mb-2">
+            <label class="form-label">Image Specs (Width x Height)</label>
+            <div class="col-6">
+              <input 
+                type="number"
+                class="form-control"
+                placeholder="Width (px)"
+                v-model="addImageWidth"
+                required
+              />
+            </div>
+            <div class="col-6">
+              <input 
+                type="number"
+                class="form-control"
+                placeholder="Height (px)"
+                v-model="addImageHeight"
+                required
+              />
+            </div>
+          </div> -->
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-secondary" @click="cancelAddTier">
+              Cancel
             </button>
-        </div>
+            <button type="submit" class="btn btn-success">Submit</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- Add Sponsor Form -->
-    <div v-if="showAddForm" class="card p-3 mb-3">
-      <h5>Add Sponsor</h5>
-      <form @submit.prevent="handleAddSponsor">
-        <div v-if="addFormError" class="alert alert-danger p-2 mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Name</label>
-          <input v-model="addName" type="text" class="form-control" required />
-        </div>
-        <div class="mb-2">
-            <label class="form-label">Tier</label>
-            <select v-model="addTier" class="form-control" required>
-              <option value="" disabled>Select a tier</option>
-              <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
-                {{ tier.tier }}
-              </option>
-            </select>
-        </div>
-        <div class="mb-2">
-            <label class="form-label">Website URL</label>
-            <input v-model="addWebsite" type="text" class="form-control" />
-        </div>
-        <div class="mb-2">
-            <label class="form-label">Image PNG</label>
-            <input v-model="addPNG" type="text" class="form-control" />
-        </div>
-        <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary" @click="cancelAdd">
+    <div v-if="showAddForm" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Add Sponsor</h5>
+        <form @submit.prevent="handleAddSponsor">
+          <div v-if="addFormError" class="alert alert-danger p-2 mb-3" role="alert">
+              <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="addName" type="text" class="form-control" required />
+          </div>
+          <div class="mb-2">
+              <label class="form-label">Tier</label>
+              <select v-model="addTier" class="form-control" required>
+                <option value="" disabled>Select a tier</option>
+                <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
+                  {{ tier.tier }}
+                </option>
+              </select>
+          </div>
+          <div class="mb-2">
+              <label class="form-label">Website URL</label>
+              <input v-model="addWebsite" type="text" class="form-control" />
+          </div>
+          <div class="mb-2">
+              <label class="form-label">Image PNG</label>
+              <input v-model="addPNG" type="text" class="form-control" />
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-secondary" @click="cancelAdd">
                 Cancel
-            </button>
-            <button type="submit" class="btn btn-success">Submit</button>
-         </div>
-      </form>
+              </button>
+              <button type="submit" class="btn btn-success">Submit</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- Remove Sponsor Form -->
-    <div v-if="showRemoveForm && isOscar" class="card p-3 mb-3">
-      <h5>Remove Sponsor</h5>
-      <form @submit.prevent="removeSponsor">
-        <div v-if="removeFormError" class="alert alert-danger p-2 mb-3" role="alert">
-          <i class="bi bi-exclamation-triangle-fill"></i> {{ removeFormError }}
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Name</label>
-          <input v-model="removeName" type="text" class="form-control" required />
-        </div>
-        <button type="button" class="btn btn-secondary" @click="cancelRemove">
-            Cancel
-        </button>
-        <button type="submit" class="btn btn-danger">Submit</button>
-      </form>
+    <div v-if="showRemoveForm && isOscar" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Remove Sponsor</h5>
+        <form @submit.prevent="removeSponsor">
+          <div v-if="removeFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ removeFormError }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="removeName" type="text" class="form-control" required />
+          </div>
+          <button type="button" class="btn btn-secondary" @click="cancelRemove">
+              Cancel
+          </button>
+          <button type="submit" class="btn btn-danger">Submit</button>
+        </form>
+      </div>
     </div>
 
     <!-- Edit Sponsor Popup -->
@@ -169,7 +234,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers } from "@/services/sponsorService";
+import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
 
 // List of sponsors
@@ -186,10 +251,18 @@ const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
 
+// Add Sponsor Tier Variables
+const addImageHeight = ref(null);
+const addImageWidth = ref(null);
+const addTierName = ref("");
+const showAddTierForm = ref(false);
+const addLowerThreshold = ref(null);
+
 // Error State Variables
 const addFormError = ref(null);
 const editFormError = ref(null);
 const removeFormError = ref(null);
+const addTierFormError = ref(null);
 
 // Edit sponsor state
 const showEditForm = ref(false);
@@ -358,6 +431,15 @@ const toggleRemoveForm = async () => {
   removeFormError.value = null;
 };
 
+const toggleAddTierForm = async () => {
+  showAddTierForm.value = !showAddTierForm.value;
+  addTierName.value = '';
+  addLowerThreshold.value = null;
+  addImageHeight.value = null;
+  addImageWidth.value = null;
+  addTierFormError.value = null;
+};
+
 const cancelAdd = () => {
   showAddForm.value = false;
   addFormError.value = null;
@@ -367,6 +449,11 @@ const cancelRemove = () => {
     showRemoveForm.value = false;
     removeFormError.value = null;
     removeName.value = "";
+}
+
+const cancelAddTier = () => {
+  showAddTierForm.value = false;
+  addTierFormError.value = null;
 }
 
 // Add sponsor
@@ -460,6 +547,48 @@ const removeSponsor = async () => {
       removeFormError.value = errorMessage;
   }
 };
+
+// Handles Adding Tiers
+const handleAddTier = async () => {
+  addTierFormError.value = null;
+
+  // const threshold = Number(addLowerThreshold.value);
+  if(!addTierName.value || addLowerThreshold.value === null){
+    addTierFormError.value = "Lower Threshold must be a non-negative number.";
+    return;
+  }
+
+  const threshold = Number(addLowerThreshold.value); // <--- RESTORED THIS LINE
+
+  if(isNaN(threshold) || threshold < 0){ // <--- ADD THIS VALIDATION
+    addTierFormError.value = "Lower Threshold must be a valid, non-negative number.";
+    return;
+  }
+
+  // const width = Number(addImageWidth.value);
+  // const height = Number(addImageHeight.value);
+  // if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
+  //   addTierFormError.value = "Image Width and Height must be positive numbers.";
+  //   return;
+  // }
+
+  try{
+    await addSponsorTier({
+      tier: addTierName.value,
+      lowerThreshold: threshold,
+      // imageWidth: width,
+      // imageHeight: height
+    });
+
+    const resTiers = await getSponsorTiers();
+    tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
+
+    showAddTierForm.value = false;
+  }catch (err){
+    const errorMessage = err.response?.data?.error || "Failed to add sponsor tier.";
+    addTierFormError.value = errorMessage;
+  }
+}
 
 // Open edit form
 const openEditForm = async (index) => {

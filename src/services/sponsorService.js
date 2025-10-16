@@ -28,3 +28,12 @@ export const deleteSponsor = async (sponsorId, eventId) => {
 export const getSponsorTiers = async () => {
   return axios.get(`${API_URL}/tiers`);
 }
+
+export const addSponsorTier = async (tierData) => {
+  return axios.post(`${API_URL}/tiers`, {
+    tier: tierData.tier,
+    lowerThreshold: tierData.lowerThreshold,
+    // imageWidth: tierData.imageWidth,
+    // imageHeight: tierData.imageHeight
+  });
+}
