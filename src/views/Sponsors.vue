@@ -12,7 +12,7 @@
 
       <!-- Remove Sponsor Tier Button -->
       <div v-if="isOscar" class="text-end mb-3">
-        <button class="btn btn-primary">
+        <button class="btn btn-primary" @click="toggleRemoveTierForm">
           Remove Sponsor Tier
         </button>
       </div>
@@ -75,6 +75,26 @@
             </button>
             <button type="submit" class="btn btn-success">Submit</button>
           </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Remove Sponsor Tier Form -->
+    <div v-if="showRemoveTierForm && isOscar" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Remove Sponsor Tier</h5>
+        <form @submit.prevent="removeSponsorTiers">
+          <div v-if="removeTierFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ removeTierFormError }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="removeTierName" type="text" class="form-control" required />
+          </div>
+          <button type="button" class="btn btn-secondary" @click="cancelRemoveTier">
+              Cancel
+          </button>
+          <button type="submit" class="btn btn-danger">Submit</button>
         </form>
       </div>
     </div>
@@ -234,7 +254,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier } from "@/services/sponsorService";
+import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, removeSponsorTier } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
 
 // List of sponsors
@@ -242,7 +262,7 @@ const sponsors = ref([]);
 const tiers = ref([]);
 const currentEventId = ref(null);
 
-// Form state
+// Form state - for sponsors
 const addName = ref("");
 const addTier = ref("");
 const addWebsite = ref("");
@@ -257,12 +277,15 @@ const addImageWidth = ref(null);
 const addTierName = ref("");
 const showAddTierForm = ref(false);
 const addLowerThreshold = ref(null);
+const showRemoveTierForm = ref(false);
+const removeTierName = ref("");
 
 // Error State Variables
 const addFormError = ref(null);
 const editFormError = ref(null);
 const removeFormError = ref(null);
 const addTierFormError = ref(null);
+const removeTierFormError = ref(null);
 
 // Edit sponsor state
 const showEditForm = ref(false);
@@ -448,6 +471,11 @@ const toggleAddTierForm = async () => {
   addTierFormError.value = null;
 };
 
+const toggleRemoveTierForm = () => {
+  showRemoveTierForm.value = !showRemoveTierForm.value;
+  removeTierFormError.value = null;
+}
+
 const cancelAdd = () => {
   showAddForm.value = false;
   addFormError.value = null;
@@ -462,6 +490,11 @@ const cancelRemove = () => {
 const cancelAddTier = () => {
   showAddTierForm.value = false;
   addTierFormError.value = null;
+}
+
+const cancelRemoveTier = () => {
+  showRemoveTierForm.value = false;
+  removeTierFormError.value = null;
 }
 
 // Add sponsor
@@ -526,20 +559,15 @@ const removeSponsor = async () => {
   const SponsorToRemove = sponsors.value.find((s) => s.name === removeName.value);
 
   if(!SponsorToRemove || !SponsorToRemove.id){
-    // console.warn(`Sponsor with name "${removeName.value}" not found of is missing an ID.`);
     removeFormError.value = `Sponsor named "${removeName.value}" was not found. Please check the spelling.`;
     return;
   }
 
   try {
-    // console.log("Found Sponsor Object: ", SponsorToRemove);
-    // console.log("eventId: ", eventId);
-    // console.log("idToDelete: ", idToDelete);
     const idToDelete = SponsorToRemove.id;
     const eventId = await getCurrentEventId();
   
     await deleteSponsor(idToDelete, eventId);
-    // console.log("Sponsor Deleted")
   
     const index = sponsors.value.findIndex((s) => s.id === idToDelete);
     if(index !== -1){
@@ -549,8 +577,6 @@ const removeSponsor = async () => {
     removeName.value = "";
     showRemoveForm.value = false;
   } catch (err) {
-      // console.error("Error deleting sponsor: ", err);
-      // 3. Handle API error (server-side check)
       const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor due to a network or server error.";
       removeFormError.value = errorMessage;
   }
@@ -566,9 +592,8 @@ const handleAddTier = async () => {
     return;
   }
 
-  const threshold = Number(addLowerThreshold.value); // <--- RESTORED THIS LINE
-
-  if(isNaN(threshold) || threshold < 0){ // <--- ADD THIS VALIDATION
+  const threshold = Number(addLowerThreshold.value); 
+  if(isNaN(threshold) || threshold < 0){
     addTierFormError.value = "Lower Threshold must be a valid, non-negative number.";
     return;
   }
@@ -597,6 +622,37 @@ const handleAddTier = async () => {
     addTierFormError.value = errorMessage;
   }
 }
+
+const removeSponsorTiers = async () => {
+  removeTierFormError.value = null;
+
+  const TierToRemove = tiers.value.find((s) => s.tier === removeTierName.value);
+
+  if(!TierToRemove || !TierToRemove.id){
+    removeTierFormError.value = `Sponsor named "${removeTierName.value}" was not found. Please check the spelling.`;
+    return;
+  }
+
+  try {
+    const idToDelete = TierToRemove.id;
+  
+    await removeSponsorTier(idToDelete);
+
+    const index = tiers.value.findIndex((t) => t.id === idToDelete);
+    if(index !== -1){
+      tiers.value.splice(index, 1);
+    }
+    
+    const resTiers = await getSponsorTiers();
+    tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
+  
+    removeTierName.value = "";
+    showRemoveTierForm.value = false;
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor tier due to a server error.";
+    removeTierFormError.value = errorMessage;
+  }
+};
 
 // Open edit form
 const openEditForm = async (index) => {

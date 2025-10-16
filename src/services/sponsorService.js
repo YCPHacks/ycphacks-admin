@@ -37,3 +37,7 @@ export const addSponsorTier = async (tierData) => {
     // imageHeight: tierData.imageHeight
   });
 }
+
+export const removeSponsorTier = async (tierId) => {
+  return axios.delete(`${API_URL}/tiers/${tierId}`);
+}
