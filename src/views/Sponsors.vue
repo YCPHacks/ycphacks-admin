@@ -169,7 +169,7 @@
           <button type="button" class="btn btn-secondary" @click="cancelRemove">
               Cancel
           </button>
-          <button type="submit" class="btn btn-danger">Confirm Delete</button>
+          <button type="submit" class="btn btn-danger ms-2">Confirm Delete</button>
         </form>
       </div>
     </div>
