@@ -87,14 +87,24 @@
           <div v-if="removeTierFormError" class="alert alert-danger p-2 mb-3" role="alert">
             <i class="bi bi-exclamation-triangle-fill"></i> {{ removeTierFormError }}
           </div>
+          <p class="alert alert-warning">
+            <strong>⚠️ Are you absolutely sure?</strong> 
+            This will permanently delete the tier and cannot be undone.
+          </p>
+          
+          <p>Please confirm the name of the tier you wish to delete:</p>
           <div class="mb-2">
             <label class="form-label">Name</label>
-            <input v-model="removeTierName" type="text" class="form-control" required />
+            <input v-model="removeTierName" type="text" class="form-control" />
           </div>
+          
           <button type="button" class="btn btn-secondary" @click="cancelRemoveTier">
-              Cancel
+            Cancel
           </button>
-          <button type="submit" class="btn btn-danger">Submit</button>
+          
+          <button type="submit" class="btn btn-danger ms-2">
+            Confirm Delete
+          </button>
         </form>
       </div>
     </div>
@@ -532,6 +542,7 @@ const cancelAddTier = () => {
 const cancelRemoveTier = () => {
   showRemoveTierForm.value = false;
   removeTierFormError.value = null;
+  removeTierName.value = '';
 }
 
 // Add sponsor
