@@ -156,6 +156,12 @@
           <div v-if="removeFormError" class="alert alert-danger p-2 mb-3" role="alert">
             <i class="bi bi-exclamation-triangle-fill"></i> {{ removeFormError }}
           </div>
+          <p class="alert alert-warning">
+            <strong>⚠️ Are you absolutely sure?</strong> 
+            This will permanently delete the sponsor and cannot be undone.
+          </p>
+          
+          <p>Please confirm the name of the sponsor you wish to delete:</p>
           <div class="mb-2">
             <label class="form-label">Name</label>
             <input v-model="removeName" type="text" class="form-control" required />
@@ -163,7 +169,7 @@
           <button type="button" class="btn btn-secondary" @click="cancelRemove">
               Cancel
           </button>
-          <button type="submit" class="btn btn-danger">Submit</button>
+          <button type="submit" class="btn btn-danger">Confirm Delete</button>
         </form>
       </div>
     </div>
