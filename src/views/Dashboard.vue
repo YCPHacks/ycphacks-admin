@@ -6,11 +6,13 @@
     <!-- Top Metrics Section -->
     <div class="metrics-container">
       <div class="metric-box checked-users">
-        <h3>750</h3>
+        <!-- Update to be actual number of users checked in -->
+        <h3>{{checkedInCount}}</h3>
         <p>Checked In Users</p>
       </div>
       <div class="metric-box rsvp-users">
-        <h3>975</h3>
+        <!-- Update to be actual number of users registered -->
+        <h3>{{registeredParticipantCount}}</h3>
         <p>Registered Users</p>
       </div>
       <div class="metric-box hardware-items">
@@ -87,16 +89,40 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: "Dashboard",
   data() {
     return {
-      showAllEvents: false
+      showAllEvents: false,
+      users: []
     };
+  },
+  computed: {
+    checkedInCount(){
+      return this.users.filter(user => user.checkIn).length;
+    },
+    registeredParticipantCount(){
+      return this.users.filter(user =>
+        user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar'
+      ).length;
+    }
+  },
+  created() {
+    this.fetchUsers();
   },
   methods: {
     toggleEvents() {
       this.showAllEvents = !this.showAllEvents;
+    },
+    async fetchUsers(){
+      try {
+        const response = await axios.get("http://localhost:3000/user/all");
+        this.users = response.data.data;
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
     }
   }
 };
