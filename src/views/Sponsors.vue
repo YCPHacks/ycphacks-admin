@@ -726,7 +726,8 @@ const handleUpdateSponsor = async () => {
       editIndex.value = null;
       editId.value = null;
   }catch (err){
-    // console.error("Error updating sponsor: ", err);const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during update.";
+    // console.error("Error updating sponsor: ", err);
+    const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during update.";
     editFormError.value = errorMessage;
   }
 };
