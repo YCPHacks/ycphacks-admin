@@ -193,6 +193,32 @@
       </div>
     </div>
 
+    <!-- Edit Sponsor Tier Popup -->
+    <div v-if="showEditTierForm && isOscar" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Edit Sponsor Tier</h5>
+        <form @submit.prevent="handleUpdateTier">
+          <div v-if="editTierFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ editTierFormError }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Tier Name</label>
+            <input v-model="editTierName" type="text" class="form-control" required />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Minimum Donation Amount ($)</label>
+            <input v-model.number="editTierLowerThreshold" type="number" class="form-control" required min="0" />
+          </div>
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-secondary" @click="cancelEditTier">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-success">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="row mt-4">
 
       <div class="col-md-4 mb-4"> 
@@ -211,7 +237,7 @@
                   <tr v-if="tierRanges.length === 0">
                     <td colspan="2" class="alert alert-info p-2 text-center">No tiers defined</td>
                   </tr>
-                  <tr v-for="tierData in tierRanges" :key="tierData.id">
+                  <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index" @click="openEditTierForm(index)" style="cursor: pointer;">
                     <td class="text-center">{{ tierData.tier }}</td>
                     <td class="text-center">{{ tierData.range }}</td>
                   </tr>
@@ -254,7 +280,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, removeSponsorTier } from "@/services/sponsorService";
+import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, updateSponsorTier, removeSponsorTier } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
 
 // List of sponsors
@@ -279,6 +305,12 @@ const showAddTierForm = ref(false);
 const addLowerThreshold = ref(null);
 const showRemoveTierForm = ref(false);
 const removeTierName = ref("");
+
+const showEditTierForm = ref(false);
+const currentEditTierId = ref(null);
+const editTierName = ref("");
+const editTierLowerThreshold = ref(null);
+const editTierFormError = ref(null);
 
 // Error State Variables
 const addFormError = ref(null);
@@ -412,34 +444,39 @@ const tierRanges = computed(() => {
       tier: currentTier.tier,
       range: `${lowerThreshold} - ${higherThreshold}`, 
       id: currentTier.id, 
+      lowerThreshold: lower,
     });
   }
   return result;
 });
 
+const fetchSponsorsAndTiers = async () => {
+  try{
+    currentEventId.value = await getCurrentEventId();
+    const eventId = await getCurrentEventId();
+    const res = await getSponsors(eventId);
+
+    const data = res.data || {};
+    sponsors.value = Array.isArray(data.sponsors)
+      ? data.sponsors.map(s => ({
+          id: s.id,
+          name: s.name,
+          website: revertUrlFromServer(s.website),
+          tier: s.tier || "",
+          image: s.image || ""
+        }))
+      : [];
+
+    const resTiers = await getSponsorTiers();
+    tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
+  }catch (err){
+      console.error("Error fetching sponsors: ", err);
+  }
+}
+
 // Fetch sponsors on load
 onMounted(async () => {
-    try{
-      currentEventId.value = await getCurrentEventId();
-      const eventId = await getCurrentEventId();
-      const res = await getSponsors(eventId);
-
-      const data = res.data || {};
-      sponsors.value = Array.isArray(data.sponsors)
-        ? data.sponsors.map(s => ({
-            id: s.id,
-            name: s.name,
-            website: revertUrlFromServer(s.website),
-            tier: s.tier || "",
-            image: s.image || ""
-          }))
-        : [];
-
-      const resTiers = await getSponsorTiers();
-      tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
-    }catch (err){
-        console.error("Error fetching sponsors: ", err);
-    }
+    await fetchSponsorsAndTiers();
 });
 
 // Toggle forms
@@ -620,6 +657,50 @@ const handleAddTier = async () => {
   }catch (err){
     const errorMessage = err.response?.data?.error || "Failed to add sponsor tier.";
     addTierFormError.value = errorMessage;
+  }
+}
+
+const openEditTierForm = (index) => {
+  const tierData = tierRanges.value[index];
+
+  if(tierData){
+    currentEditTierId.value = tierData.id;
+    editTierName.value = tierData.tier;
+    editTierLowerThreshold.value = tierData.lowerThreshold;
+    editTierFormError.value = null;
+    showEditTierForm.value = true;
+  }
+}
+
+const cancelEditTier = () => {
+  showEditTierForm.value = false;
+  currentEditTierId.value = null;
+  editTierFormError.value = null;
+}
+
+const handleUpdateTier = async () => {
+  editTierFormError.value = null;
+
+  const threshold = Number(editTierLowerThreshold.value);
+  if(!editTierName.value || isNaN(threshold) || threshold < 0){
+    editTierFormError.value = "Tier Name cannot be empty and Lower Threshold must be a valid, non-negative number.";
+    return;
+  }
+
+  try{
+    await updateSponsorTier(currentEditTierId.value, {
+      tier: editTierName.value,
+      lowerThreshold: threshold,
+      // imageWidth: editImageWidth.value,
+      // imageHeight: editImageHeight.value
+    });
+
+    await fetchSponsorsAndTiers();
+
+    showEditTierForm.value = false;
+  }catch (err){
+    const errorMessage = err.response?.data?.error || "Failed to update sponsor tier.";
+    editTierFormError.value = errorMessage;
   }
 }
 

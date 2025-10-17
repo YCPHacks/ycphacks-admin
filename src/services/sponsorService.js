@@ -38,6 +38,10 @@ export const addSponsorTier = async (tierData) => {
   });
 }
 
+export const updateSponsorTier = async (id, updates) => {
+  return axios.put(`${API_URL}/tiers/${id}`, updates);
+}
+
 export const removeSponsorTier = async (tierId) => {
   return axios.delete(`${API_URL}/tiers/${tierId}`);
 }
