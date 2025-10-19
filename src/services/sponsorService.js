@@ -33,8 +33,8 @@ export const addSponsorTier = async (tierData) => {
   return axios.post(`${API_URL}/tiers`, {
     tier: tierData.tier,
     lowerThreshold: tierData.lowerThreshold,
-    // imageWidth: tierData.imageWidth,
-    // imageHeight: tierData.imageHeight
+    width: tierData.width,
+    height: tierData.height
   });
 }
 
