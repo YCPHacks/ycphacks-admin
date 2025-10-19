@@ -73,7 +73,10 @@
               <td>{{ user.tShirtSize }}</td>
               <!-- Add in dietary highlights -->
               <td class="text-center">
-                <span v-if="user.dietaryRestrictions" class="badge bg-warning text-dark">
+                <span 
+                  v-if="user.dietaryRestrictions && user.dietaryRestrictions.toLowerCase() !== 'none' && user.dietaryRestrictions.toLowerCase() !== 'null'"
+                  :class="getDietaryRestriction(user.dietaryRestrictions)"
+                >
                   {{ user.dietaryRestrictions }}
                 </span>
                 <span v-else class="text-muted">–</span>
@@ -88,6 +91,39 @@
 
 <script>
 import axios from "axios";
+
+const DIET_RESTRICTIONS = [
+  'vegan',
+  'veggie',
+  'vegetarian',
+  'pescatarian',
+  'gluten',
+  'dairy',
+  'lactose',
+  'keto',
+  'paleo',
+  'low-carb',
+  'sugar-free',
+];
+
+const RELIGIOUS_RESTRICTIONS = [
+  'kosher',
+  'halal',
+  'jain',
+  'buddhist',
+];
+
+const ALLERGY_KEYWORDS = [
+  'allergy',
+  'allergic',
+  'nut',
+  'shellfish',
+  'peanut',
+  'tree nut',
+  'soy',
+  'wheat',
+  'egg',
+];
 
 export default {
   name: "UserManagement",
@@ -145,10 +181,38 @@ export default {
       }catch (err){
         console.error(`Error toggling check-in for user ${userId}:`, err);
       }
+    },
+    getDietaryRestriction(restriction){
+      if(!restriction || restriction.toLowerCase() === 'none' || restriction.toLowerCase() === 'null'){
+        return '';
+      }
+
+      const normalizedRestriction = restriction.toLowerCase();
+      
+      for (const term of ALLERGY_KEYWORDS) {
+        if (normalizedRestriction.includes(term)) {
+              return 'badge bg-danger text-white'; // Red
+        }
+      }
+
+      for (const term of DIET_RESTRICTIONS){
+        if(normalizedRestriction.includes(term)){
+          return 'badge bg-warning text-dark';
+        }
+      }
+
+      for (const term of RELIGIOUS_RESTRICTIONS) {
+        if (normalizedRestriction.includes(term)) {
+          return 'badge bg-info text-dark';
+        }
+      }
+
+      return 'badge bg-danger text-white';
     }
   },
 };
 </script>
+
 <style scoped>
 .container {
   max-width: 100%;
