@@ -165,7 +165,7 @@ export default {
       }
     },
     async toggleCheckIn(userId){
-      console.log('Attempting to toggle check-in for ID:', userId);
+      // console.log('Attempting to toggle check-in for ID:', userId);
       const userIdNumber = Number(userId);
       const user = this.users.find(u => u.id === userIdNumber);
       if(!user) return;
