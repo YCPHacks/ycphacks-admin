@@ -5,21 +5,36 @@
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-4">
       <li class="nav-item">
-        <button class="nav-link" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
-          All Users
+        <button class="nav-link" :class="{ active: activeTab === 'participant' }" @click="activeTab = 'participant'">
+          Participant Users
         </button>
       </li>
-      <li class="nav-item">
+      <!-- Only Oscar should have access to Staff -->
+      <li class="nav-item" v-if="isOscar">
         <button class="nav-link" :class="{ active: activeTab === 'staff' }" @click="activeTab = 'staff'">
           Staff Users
         </button>
       </li>
+      <li class="nav-item" v-if="isOscar">
+        <button class="nav-link" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
+          All Users
+        </button>
+      </li>
     </ul>
+
+    <!-- Add Total Users -->
+
+    <!-- Add Total T-Shirt Sizes -->
 
     <!-- Search Input -->
     <div class="mb-4">
       <input type="text" v-model="searchQuery" class="form-control" placeholder="Search by name" />
     </div>
+
+    <!-- Add Oscar functionality for changing User info -->
+    <!-- - Also for changing user's role -->
+    <!-- Add Download User emails button-->
+    <!-- Add Export All Users button -->
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
@@ -27,11 +42,15 @@
         <table class="table table-striped table-hover">
           <thead class="thead-light">
             <tr>
+              <th class="text-left">Checked In?</th>
               <th class="text-left">First Name</th>
               <th class="text-left">Last Name</th>
-              <th class="text-left">Phone Number</th>
+              <th class="text-left">Age</th>
               <th class="text-left">Email</th>
-              <th class="text-left">Role</th>
+              <th class="text-left">Phone Number</th>
+              <th class="text-left">School</th>
+              <th class="text-left">T-Shirt Size</th>
+              <th class="text-left">Dietary Restrictions</th>
             </tr>
           </thead>
           <tbody>
@@ -41,11 +60,32 @@
               </td>
             </tr>
             <tr v-for="user in filteredUsers" :key="user.id">
+              <!-- Add Check Boxes for Check in -->
+              <td class="text-center align-middle table-checkbox-center">
+                <input 
+                  type="checkbox" 
+                  :checked="user.checkIn" 
+                  @change="toggleCheckIn(user.id)" 
+                  class="form-check-input"
+                >
+              </td>
               <td>{{ user.firstName }}</td>
               <td>{{ user.lastName }}</td>
-              <td>{{ user.phoneNumber }}</td>
+              <td>{{ user.age }}</td>
               <td>{{ user.email }}</td>
-              <td>{{ user.role }}</td>
+              <td>{{ user.phoneNumber }}</td>
+              <td>{{ user.school }}</td>
+              <td>{{ user.tShirtSize }}</td>
+              <!-- Add in dietary highlights -->
+              <td class="text-center">
+                <span 
+                  v-if="user.dietaryRestrictions && user.dietaryRestrictions.toLowerCase() !== 'none' && user.dietaryRestrictions.toLowerCase() !== 'null'"
+                  :class="getDietaryRestriction(user.dietaryRestrictions)"
+                >
+                  {{ user.dietaryRestrictions }}
+                </span>
+                <span v-else class="text-muted">–</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -57,29 +97,82 @@
 <script>
 import axios from "axios";
 
+const DIET_RESTRICTIONS = [
+  'vegan',
+  'veggie',
+  'vegetarian',
+  'pescatarian',
+  'gluten',
+  'dairy',
+  'lactose',
+  'keto',
+  'paleo',
+  'low-carb',
+  'sugar-free',
+];
+
+const RELIGIOUS_RESTRICTIONS = [
+  'kosher',
+  'halal',
+  'jain',
+  'buddhist',
+];
+
+const ALLERGY_KEYWORDS = [
+  'allergy',
+  'allergic',
+  'nut',
+  'shellfish',
+  'peanut',
+  'tree nut',
+  'soy',
+  'wheat',
+  'egg',
+];
+
 export default {
   name: "UserManagement",
   data() {
     return {
       users: [],
       searchQuery: "",
-      activeTab: "all", // 'all' or 'staff'
+      activeTab: "participant", // 'all' or 'staff'
     };
   },
   computed: {
+    isOscar(){
+      return this.$store.getters.UserRole === 'oscar';
+    },
     filteredUsers() {
       const query = this.searchQuery.toLowerCase();
-      const filteredList = this.activeTab === "all"
-        ? this.users
-        : this.users.filter(user => user.role.toLowerCase() === "staff");
+      let list = this.users;
 
-      return filteredList.filter(
-        user =>
+      if(this.activeTab === "staff"){
+        list = this.users.filter(user => user.role.toLowerCase() === "staff" || user.role.toLowerCase() === "oscar");
+      }else if(this.activeTab === "participant"){
+        list = this.users.filter(user => user.role.toLowerCase() === "participant");
+      }
+
+      let filteredList = list.filter(
+        user=>
           user.firstName.toLowerCase().includes(query) ||
           user.lastName.toLowerCase().includes(query) ||
           user.email.toLowerCase().includes(query)
       );
-    },
+
+      filteredList.sort((a, b) => {
+        // Sort by last name
+        if (a.lastName < b.lastName) return -1;
+        if (a.lastName > b.lastName) return 1;
+
+        // If last names are equal, sort by first name
+        if (a.firstName < b.firstName) return -1;
+        if (a.firstName > b.firstName) return 1;
+        return 0;
+      });
+      
+      return filteredList;
+    }
   },
   created() {
     this.fetchUsers();
@@ -93,9 +186,55 @@ export default {
         console.error("Error fetching users:", error);
       }
     },
+    async toggleCheckIn(userId){
+      // console.log('Attempting to toggle check-in for ID:', userId);
+      const userIdNumber = Number(userId);
+      const user = this.users.find(u => u.id === userIdNumber);
+      if(!user) return;
+
+      const newCheckInStatus = !user.checkIn;
+
+      try{
+        await axios.put(`http://localhost:3000/user/${userId}/checkin`, {
+          checkIn: newCheckInStatus
+        });
+        
+        user.checkIn = newCheckInStatus;
+      }catch (err){
+        console.error(`Error toggling check-in for user ${userId}:`, err);
+      }
+    },
+    getDietaryRestriction(restriction){
+      if(!restriction || restriction.toLowerCase() === 'none' || restriction.toLowerCase() === 'null'){
+        return '';
+      }
+
+      const normalizedRestriction = restriction.toLowerCase();
+      
+      for (const term of ALLERGY_KEYWORDS) {
+        if (normalizedRestriction.includes(term)) {
+              return 'badge bg-danger text-white'; // Red
+        }
+      }
+
+      for (const term of DIET_RESTRICTIONS){
+        if(normalizedRestriction.includes(term)){
+          return 'badge bg-warning text-dark';
+        }
+      }
+
+      for (const term of RELIGIOUS_RESTRICTIONS) {
+        if (normalizedRestriction.includes(term)) {
+          return 'badge bg-info text-dark';
+        }
+      }
+
+      return 'badge bg-danger text-white';
+    }
   },
 };
 </script>
+
 <style scoped>
 .container {
   max-width: 100%;
@@ -128,7 +267,13 @@ export default {
 .table {
   margin: 0;
   font-size: 0.875rem;
-  min-width: 1200px;
+  /* min-width: 1200px; */
+}
+
+.table td:nth-child(5){
+  max-width: 150px;
+  word-break: break-all;
+  white-space: normal !important;
 }
 
 .thead-light th {
@@ -137,7 +282,19 @@ export default {
   font-weight: 600;
   vertical-align: middle;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
+}
+
+table tbody tr td.table-checkbox-center .form-check-input{
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: block !important;
+  float: none !important;
+}
+
+.table td{
+  text-align: center;
+  vertical-align: middle;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
@@ -155,5 +312,6 @@ export default {
 .form-control {
   border-radius: 0.5rem;
 }
+
 </style>
 
