@@ -102,7 +102,7 @@
             Cancel
           </button>
           
-          <button type="submit" class="btn btn-danger ms-2">
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">
             Confirm Delete
           </button>
         </form>
@@ -169,7 +169,7 @@
           <button type="button" class="btn btn-secondary" @click="cancelRemove">
               Cancel
           </button>
-          <button type="submit" class="btn btn-danger ms-2">Confirm Delete</button>
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">Confirm Delete</button>
         </form>
       </div>
     </div>
@@ -489,6 +489,20 @@ const tierRanges = computed(() => {
     });
   }
   return result;
+});
+
+const isDeleteButtonDisabled = computed(() => {
+  const enteredName = removeTierName.value.trim();
+
+  // Checks if it's blank -> should be grayed out
+  if(enteredName === '') return true;
+
+  const tierExists = tiers.value.some(tier => {
+    // Checks if the name exists
+    return tier.tier.toLowerCase() === enteredName.toLocaleLowerCase();
+  });
+
+  return !tierExists;
 });
 
 const fetchSponsorsAndTiers = async () => {
