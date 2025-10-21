@@ -101,7 +101,7 @@ export default {
   },
   computed: {
     checkedInCount(){
-      return this.users.filter(user => user.checkIn).length;
+      return this.users.filter(user => user.checkIn && user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar').length;
     },
     registeredParticipantCount(){
       return this.users.filter(user =>

@@ -5,14 +5,19 @@
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-4">
       <li class="nav-item">
-        <button class="nav-link" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
-          All Users
+        <button class="nav-link" :class="{ active: activeTab === 'participant' }" @click="activeTab = 'participant'">
+          Participant Users
         </button>
       </li>
       <!-- Only Oscar should have access to Staff -->
       <li class="nav-item" v-if="isOscar">
         <button class="nav-link" :class="{ active: activeTab === 'staff' }" @click="activeTab = 'staff'">
           Staff Users
+        </button>
+      </li>
+      <li class="nav-item" v-if="isOscar">
+        <button class="nav-link" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
+          All Users
         </button>
       </li>
     </ul>
@@ -131,7 +136,7 @@ export default {
     return {
       users: [],
       searchQuery: "",
-      activeTab: "all", // 'all' or 'staff'
+      activeTab: "participant", // 'all' or 'staff'
     };
   },
   computed: {
@@ -140,16 +145,33 @@ export default {
     },
     filteredUsers() {
       const query = this.searchQuery.toLowerCase();
-      const filteredList = this.activeTab === "all"
-        ? this.users
-        : this.users.filter(user => user.role.toLowerCase() === "staff");
+      let list = this.users;
 
-      return filteredList.filter(
-        user =>
+      if(this.activeTab === "staff"){
+        list = this.users.filter(user => user.role.toLowerCase() === "staff" || user.role.toLowerCase() === "oscar");
+      }else if(this.activeTab === "participant"){
+        list = this.users.filter(user => user.role.toLowerCase() === "participant");
+      }
+
+      let filteredList = list.filter(
+        user=>
           user.firstName.toLowerCase().includes(query) ||
           user.lastName.toLowerCase().includes(query) ||
           user.email.toLowerCase().includes(query)
       );
+
+      filteredList.sort((a, b) => {
+        // Sort by last name
+        if (a.lastName < b.lastName) return -1;
+        if (a.lastName > b.lastName) return 1;
+
+        // If last names are equal, sort by first name
+        if (a.firstName < b.firstName) return -1;
+        if (a.firstName > b.firstName) return 1;
+        return 0;
+      });
+      
+      return filteredList;
     }
   },
   created() {
