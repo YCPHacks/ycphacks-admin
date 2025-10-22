@@ -175,7 +175,10 @@ export default {
         user=>
           user.firstName.toLowerCase().includes(query) ||
           user.lastName.toLowerCase().includes(query) ||
-          user.email.toLowerCase().includes(query)
+          user.email.toLowerCase().includes(query) ||
+          (user.tShirtSize && user.tShirtSize.toLowerCase().includes(query)) ||
+          (user.dietaryRestrictions && user.dietaryRestrictions.toLowerCase().includes(query)) ||
+          (user.school && user.school.toLowerCase().includes(query))
       );
 
       filteredList.sort((a, b) => {
