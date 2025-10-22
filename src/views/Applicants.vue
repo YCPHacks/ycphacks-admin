@@ -60,7 +60,7 @@
         <table class="table table-striped table-hover">
           <thead class="thead-light">
             <tr>
-              <th class="text-left">Checked In?</th>
+              <th class="text-left" v-if="activeTab === 'participant'">Checked In?</th>
               <th class="text-left">First Name</th>
               <th class="text-left">Last Name</th>
               <th class="text-left">Age</th>
@@ -79,7 +79,7 @@
             </tr>
             <tr v-for="user in filteredUsers" :key="user.id">
               <!-- Add Check Boxes for Check in -->
-              <td class="text-center align-middle table-checkbox-center">
+              <td class="text-center align-middle table-checkbox-center" v-if="activeTab === 'participant'">
                 <input 
                   type="checkbox" 
                   :checked="user.checkIn" 

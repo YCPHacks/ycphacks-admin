@@ -43,6 +43,8 @@
       <p>Participants can apply for YCPHacks Events.</p>
     </div>
 
+    <!-- T-shirt Sizes Displayed -->
+    <!-- Need to add logic for if the event applications are closed -> shouldn't show if closed -->
     <div class="tshirt-summary-row">
       
       <div class="tshirt-box bg-all">
