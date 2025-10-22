@@ -23,8 +23,26 @@
     </ul>
 
     <!-- Add Total Users -->
+    <div class="d-flex align-items-center mb-2 tshirt-compact-row">
+    
+      <h5 class="me-4 text-nowrap">
+        👕 T-Shirt Sizes ({{ activeTab.toUpperCase() }}):
+      </h5>
+      
+      <div 
+        v-for="(count, size) in tshirtSizeTally.tally" 
+        :key="size" 
+        class="me-3 text-nowrap"
+        :class="{'text-danger fw-bold': size === 'N/A'}"
+      >
+        <span class="fw-bold">{{ size }}:</span> {{ count }}
+      </div>
 
-    <!-- Add Total T-Shirt Sizes -->
+      <!-- Add Total T-Shirt Sizes -->
+      <span class="badge bg-primary fs-6 ms-auto text-nowrap">
+        Total Order: {{ tshirtSizeTally.totalShirts }}
+      </span>
+    </div>
 
     <!-- Search Input -->
     <div class="mb-4">
@@ -172,6 +190,35 @@ export default {
       });
       
       return filteredList;
+    },
+    tshirtSizeTally() {
+      const tally = this.filteredUsers.reduce((acc, user) => {
+        const size = user.tShirtSize ? user.tShirtSize.toUpperCase().trim() : 'N/A';
+      
+        if (size){
+          acc[size] = (acc[size] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      const order = ['S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
+      const orderedTally = {};
+      let totalShirts = 0;
+
+      order.forEach(key => {
+        if (tally[key]) {
+          orderedTally[key] = tally[key];
+          // Only count actual sizes towards the order total
+          if (key !== 'N/A') { 
+            totalShirts += tally[key];
+          }
+        }
+      });
+
+      return {
+        tally: orderedTally,
+        totalShirts: totalShirts
+      };
     }
   },
   created() {
@@ -311,6 +358,28 @@ table tbody tr td.table-checkbox-center .form-check-input{
 
 .form-control {
   border-radius: 0.5rem;
+}
+
+.tshirt-compact-row {
+    background-color: #f8f9fa; /* Light background for visibility */
+    border: 1px solid #dee2e6;
+    padding: 8px 15px; /* Smaller padding */
+    border-radius: 0.5rem;
+    font-size: 0.9rem; /* Slightly smaller font */
+    display: flex; /* Ensures flexible alignment */
+    flex-wrap: nowrap; /* CRITICAL: Prevents wrapping to multiple lines */
+    overflow-x: auto; /* Allows scrolling if the list gets too long */
+}
+
+.tshirt-compact-row h5 {
+    font-size: 1.1rem; /* Adjust heading size */
+    margin-bottom: 0;
+    font-weight: 700;
+}
+
+/* Ensure the search bar is still positioned correctly below */
+.mb-4 {
+    margin-bottom: 1.5rem !important;
 }
 
 </style>
