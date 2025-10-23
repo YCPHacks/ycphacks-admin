@@ -48,7 +48,7 @@
             <label class="form-label">Lower Threshold</label>
             <input v-model="addLowerThreshold" type="number" class="form-control" required/>
           </div>
-          <!-- <div class="mb-2">
+          <div class="mb-2">
             <label class="form-label">Image Specs (Width x Height)</label>
             <div class="col-6">
               <input 
@@ -68,7 +68,7 @@
                 required
               />
             </div>
-          </div> -->
+          </div>
           <div class="d-flex justify-content-end gap-2 mt-3">
             <button type="button" class="btn btn-secondary" @click="cancelAddTier">
               Cancel
@@ -102,7 +102,7 @@
             Cancel
           </button>
           
-          <button type="submit" class="btn btn-danger ms-2">
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">
             Confirm Delete
           </button>
         </form>
@@ -133,6 +133,10 @@
           <div class="mb-2">
               <label class="form-label">Website URL</label>
               <input v-model="addWebsite" type="text" class="form-control" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">$ Amount</label>
+            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
           </div>
           <div class="mb-2">
               <label class="form-label">Image PNG</label>
@@ -169,7 +173,7 @@
           <button type="button" class="btn btn-secondary" @click="cancelRemove">
               Cancel
           </button>
-          <button type="submit" class="btn btn-danger ms-2">Confirm Delete</button>
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">Confirm Delete</button>
         </form>
       </div>
     </div>
@@ -199,6 +203,10 @@
             <label class="form-label">Website URL</label>
             <input v-model="editWebsite" type="text" class="form-control" />
           </div>
+          <div class="mb-2">
+            <label class="form-label">$ Amount</label>
+            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
+          </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEdit">
               Cancel
@@ -211,7 +219,7 @@
 
     <!-- Edit Sponsor Tier Popup -->
     <div v-if="showEditTierForm && isOscar" class="popup-overlay">
-      <div class="card p-3 popup">
+      <div class="card p-3 popup" :key="currentEditTierId">
         <h5>Edit Sponsor Tier</h5>
         <form @submit.prevent="handleUpdateTier">
           <div v-if="editTierFormError" class="alert alert-danger p-2 mb-3" role="alert">
@@ -224,6 +232,27 @@
           <div class="mb-2">
             <label class="form-label">Minimum Donation Amount ($)</label>
             <input v-model.number="editTierLowerThreshold" type="number" class="form-control" required min="0" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Image Specs (Width x Height)</label>
+            <div class="col-6">
+              <input 
+                type="number"
+                class="form-control"
+                placeholder="Width (px)"
+                v-model="editImageWidth" required
+                min="1"
+              />
+            </div>
+            <div class="col-6">
+              <input 
+                type="number"
+                class="form-control"
+                placeholder="Height (px)"
+                v-model="editImageHeight" required
+                min="1"
+              />
+            </div>
           </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEditTier">
@@ -253,7 +282,7 @@
                   <tr v-if="tierRanges.length === 0">
                     <td colspan="2" class="alert alert-info p-2 text-center">No tiers defined</td>
                   </tr>
-                  <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index" @click="openEditTierForm(index)" style="cursor: pointer;">
+                  <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index" @click="openEditTierForm(tierData)" style="cursor: pointer;">
                     <td class="text-center">{{ tierData.tier }}</td>
                     <td class="text-center">{{ tierData.range }}</td>
                   </tr>
@@ -280,10 +309,26 @@
                 <tr v-if="sponsors.length === 0">
                   <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
                 </tr>
-                <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
-                  <td class="text-center">{{ sponsor.name }}</td>
-                  <td class="text-center">{{ sponsor.tier }}</td>
-                  <td class="text-center">{{ sponsor.website }}</td>
+                <tr 
+                  v-for="(sponsor, index) in sponsors" 
+                  :key="sponsor.id || index" 
+                  @click="openEditForm(index)" 
+                  style="cursor: pointer"
+                  >
+                  
+                  <td 
+                    class="text-center"
+                    
+                    :class="{ 'highlight-name-needs-update': isSponsorTierInvalid(sponsor, tiers) }"
+                  >
+                    {{ sponsor.name }}
+                  </td>
+                  
+                  <td class="text-center">
+                    {{ sponsor.tier }}
+                  </td>
+                  
+                  <td class="text-left">{{ sponsor.website }}</td>
                 </tr>
               </tbody>
             </table>
@@ -309,6 +354,7 @@ const addName = ref("");
 const addTier = ref("");
 const addWebsite = ref("");
 const addPNG = ref("");
+const addAmount = ref(0);
 const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
@@ -327,6 +373,8 @@ const currentEditTierId = ref(null);
 const editTierName = ref("");
 const editTierLowerThreshold = ref(null);
 const editTierFormError = ref(null);
+const editImageHeight = ref(null);
+const editImageWidth = ref(null);
 
 // Error State Variables
 const addFormError = ref(null);
@@ -343,6 +391,7 @@ const editName = ref("");
 const editTier = ref("");
 const editWebsite = ref("");
 const editPNG = ref("");
+const editAmount = ref(0);
 
 // Validate Characters
 const validateName = (name) => {
@@ -461,9 +510,116 @@ const tierRanges = computed(() => {
       range: `${lowerThreshold} - ${higherThreshold}`, 
       id: currentTier.id, 
       lowerThreshold: lower,
+      imageWidth: currentTier.width, 
+      imageHeight: currentTier.height,
     });
   }
   return result;
+});
+
+const validateTierAmount = (amount, tierId) => {
+  const selectedTier = tiers.value.find(t => t.id === tierId);
+
+  if(!selectedTier){
+    console.warn("Selected tier ID not found for validation.");
+    return null;
+  }
+
+  const lowerThreshold = Number(selectedTier.lowerThreshold || 0);
+
+  const sortedTiers = [...tiers.value].sort((a, b) =>
+    Number(a.lowerThreshold || 0) - Number(b.lowerThreshold || 0)
+  );
+
+  let upperThreshold = Infinity;
+  let upperThresholdDisplayValue;
+
+  const currentIndex = sortedTiers.findIndex(t => t.id === tierId);
+
+  if(currentIndex !== -1){
+    const nextTier = sortedTiers[currentIndex + 1];
+
+    if(nextTier){
+      const nextLower = Number(nextTier.lowerThreshold);
+
+      upperThreshold = nextLower;
+      upperThresholdDisplayValue = nextLower - 1;
+    }else{
+      upperThreshold = Infinity;
+      upperThresholdDisplayValue = "up";
+    }
+  }else{
+    upperThreshold = Infinity;
+    upperThresholdDisplayValue = "up";
+  }
+
+  if(amount >= lowerThreshold && amount < upperThreshold){
+    return null;
+  }
+  
+  const minRange = formatCurrency(lowerThreshold);
+  
+  let maxRange;
+  if (upperThresholdDisplayValue === "up") {
+      maxRange = "and up";
+  } else {
+      maxRange = formatCurrency(upperThresholdDisplayValue);
+  }
+  
+  return `The entered amount (${formatCurrency(amount)}) does not match the selected tier range (${minRange} - ${maxRange}).`;
+}
+
+const isSponsorTierInvalid = (sponsor, currentTiers) => {
+    const amount = Number(sponsor.amount) || 0;
+    const assignedTierName = sponsor.tier; 
+
+    // Find the currently assigned tier object
+    const assignedTier = currentTiers.find(t => t.tier === assignedTierName);
+    if (!assignedTier) {
+        // Highlight if tier ID is missing (deleted tier)
+        return true; 
+    }
+
+    const lowerThreshold = Number(assignedTier.lowerThreshold || 0);
+
+    // Sort tiers to find the threshold of the next tier
+    const sortedTiers = [...currentTiers].sort((a, b) =>
+        Number(a.lowerThreshold || 0) - Number(b.lowerThreshold || 0)
+    );
+
+    let upperLimit = Infinity;
+    const currentIndex = sortedTiers.findIndex(t => t.tier === assignedTierName);
+
+    if (currentIndex !== -1) {
+        const nextTier = sortedTiers[currentIndex + 1];
+        if (nextTier) {
+            const nextLowerThreshold = Number(nextTier.lowerThreshold || 0);
+            upperLimit = nextLowerThreshold - 1;
+        }
+    }
+    
+    // Check 1: Must be >= lowerThreshold
+    const isAboveLower = amount >= lowerThreshold;
+    
+    // Check 2: Must be <= upperLimit (which is the effective ceiling, e.g., $1,500)
+    const isBelowUpper = amount <= upperLimit;
+
+    // The tier is VALID if BOTH checks pass.
+    return !(isAboveLower && isBelowUpper);
+};
+
+const isDeleteButtonDisabled = computed(() => {
+  const enteredName = removeTierName.value.trim();
+
+  // Checks if it's blank -> should be grayed out
+  if(enteredName === '') return true;
+
+  const tierExists = tiers.value.some(tier => {
+    // Checks if the name exists
+    return tier.tier.toLowerCase() === enteredName.toLocaleLowerCase();
+  });
+
+  return !tierExists;
 });
 
 const fetchSponsorsAndTiers = async () => {
@@ -478,8 +634,12 @@ const fetchSponsorsAndTiers = async () => {
           id: s.id,
           name: s.name,
           website: revertUrlFromServer(s.website),
+          amount: s.amount ?? 0,
           tier: s.tier || "",
-          image: s.image || ""
+          sponsorTierId: s.tierId || null,
+          image: s.image || "",
+          imageWidth: s.imageWidth ?? null,
+          imageHeight: s.imageHeight ?? null,   
         }))
       : [];
 
@@ -567,6 +727,12 @@ const handleAddSponsor = async () => {
     return;
   }
 
+  const tierValidationMessage = validateTierAmount(addAmount.value, addTier.value);
+  if (tierValidationMessage) {
+      addFormError.value = tierValidationMessage;
+      return;
+  }
+
   const transformedWebsite = transformUrlForServer(addWebsite.value);
 
   try {
@@ -576,6 +742,7 @@ const handleAddSponsor = async () => {
       sponsorName: addName.value,
       sponsorWebsite: transformedWebsite,
       image: addPNG.value || null,
+      amount: addAmount.value,
       sponsorTierId: addTier.value,
       eventId: currentEventId.value,
     });
@@ -597,6 +764,7 @@ const handleAddSponsor = async () => {
     addTier.value = "";
     addWebsite.value = "";
     addPNG.value = "";
+    addAmount.value = 0;
     showAddForm.value = false;
 
   } catch(err) {
@@ -652,19 +820,19 @@ const handleAddTier = async () => {
     return;
   }
 
-  // const width = Number(addImageWidth.value);
-  // const height = Number(addImageHeight.value);
-  // if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
-  //   addTierFormError.value = "Image Width and Height must be positive numbers.";
-  //   return;
-  // }
+  const width = Number(addImageWidth.value);
+  const height = Number(addImageHeight.value);
+  if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
+    addTierFormError.value = "Image Width and Height must be positive numbers.";
+    return;
+  }
 
   try{
     await addSponsorTier({
       tier: addTierName.value,
       lowerThreshold: threshold,
-      // imageWidth: width,
-      // imageHeight: height
+      width: width,
+      height: height
     });
 
     const resTiers = await getSponsorTiers();
@@ -677,17 +845,17 @@ const handleAddTier = async () => {
   }
 }
 
-const openEditTierForm = (index) => {
-  const tierData = tierRanges.value[index];
-
-  if(tierData){
-    currentEditTierId.value = tierData.id;
-    editTierName.value = tierData.tier;
-    editTierLowerThreshold.value = tierData.lowerThreshold;
-    editTierFormError.value = null;
-    showEditTierForm.value = true;
-  }
-}
+const openEditTierForm = (tierData) => {
+  // console.log("Tier Data Received: ", tierData);
+  currentEditTierId.value = tierData.id;
+  editTierName.value = tierData.tier;
+  editTierLowerThreshold.value = tierData.lowerThreshold;
+  
+  editImageWidth.value = tierData.imageWidth; 
+  editImageHeight.value = tierData.imageHeight;
+  
+  showEditTierForm.value = true;
+};
 
 const cancelEditTier = () => {
   showEditTierForm.value = false;
@@ -696,28 +864,32 @@ const cancelEditTier = () => {
 }
 
 const handleUpdateTier = async () => {
-  editTierFormError.value = null;
+    editTierFormError.value = null;
 
-  const threshold = Number(editTierLowerThreshold.value);
-  if(!editTierName.value || isNaN(threshold) || threshold < 0){
-    editTierFormError.value = "Tier Name cannot be empty and Lower Threshold must be a valid, non-negative number.";
-    return;
-  }
+    const threshold = Number(editTierLowerThreshold.value);
+    
+    const imageWidth = Number(editImageWidth.value);
+    const imageHeight = Number(editImageHeight.value);
+    
+    if(!editTierName.value || isNaN(threshold) || threshold < 0 || isNaN(imageWidth) || imageWidth <= 0 || isNaN(imageHeight) || imageHeight <= 0){
+      editTierFormError.value = "All fields must be valid. Tier Name cannot be empty. Threshold must be non-negative. Image dimensions must be positive numbers.";
+      return;
+    }
 
-  try{
-    await updateSponsorTier(currentEditTierId.value, {
-      tier: editTierName.value,
-      lowerThreshold: threshold,
-      // imageWidth: editImageWidth.value,
-      // imageHeight: editImageHeight.value
-    });
+    try{
+      await updateSponsorTier(currentEditTierId.value, {
+        tier: editTierName.value,
+        lowerThreshold: threshold,
+        width: imageWidth,
+        height: imageHeight
+      });
 
-    await fetchSponsorsAndTiers();
+      await fetchSponsorsAndTiers();
 
-    showEditTierForm.value = false;
+      showEditTierForm.value = false;
   }catch (err){
-    const errorMessage = err.response?.data?.error || "Failed to update sponsor tier.";
-    editTierFormError.value = errorMessage;
+      const errorMessage = err.response?.data?.error || "Failed to update sponsor tier.";
+      editTierFormError.value = errorMessage;
   }
 }
 
@@ -759,6 +931,8 @@ const openEditForm = async (index) => {
     editId.value = sponsor.id;
     editName.value = sponsor.name;
     editTier.value = tiers.value.find(t => t.tier === sponsor.tier)?.id || "";
+    editAmount.value = sponsor.amount;
+    editWebsite.value = revertUrlFromServer(sponsor.website);
     showEditForm.value = true;
     editFormError.value = null;
 
@@ -786,35 +960,26 @@ const handleUpdateSponsor = async () => {
     return;
   }
 
+  const tierValidationMessage = validateTierAmount(editAmount.value, editTier.value);
+  if (tierValidationMessage) {
+      editFormError.value = tierValidationMessage;
+      return;
+  }
+
   const transformedWebsite = transformUrlForServer(editWebsite.value);
 
   try{
       if(editIndex.value !== null){
-        console.log("Updating sponsor with:", {
-          editId: editId.value,
-          sponsorName: editName.value,
-          sponsorWebsite: transformedWebsite,
-          image: editPNG.value || null,
-          sponsorTierId: editTier.value,
-          eventId: currentEventId.value,
-        });
-
         await updateEventSponsor(editId.value, {
             sponsorName: editName.value,
-            sponsorWebsite: editWebsite.value,
+            sponsorWebsite: transformedWebsite,
             image: editPNG.value || null,
+            amount: editAmount.value,
             sponsorTierId: editTier.value ,  //dropdown value
             eventId: currentEventId.value,
         });
-
-        console.log({
-          editId: editId.value,
-          sponsorName: editName.value,
-          sponsorWebsite: editWebsite.value,
-          image: editPNG.value || null,
-          sponsorTierId: editTier.value
-        });
-
+        
+        sponsors.value[editIndex.value].amount = editAmount.value;
         sponsors.value[editIndex.value].name = editName.value;
         sponsors.value[editIndex.value].website = editWebsite.value;
         sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
@@ -933,6 +1098,16 @@ const getCurrentEventId = () => {
   word-break: break-all;
   max-width: 200px;
   text-align: left !important;
+}
+
+.highlight-name-needs-update {
+    /* Subtle background to draw attention */
+    background-color: #ffe6e6 !important; 
+    /* Prominent text color */
+    color: #cc0000 !important;
+    font-weight: bold;
+    /* Optional: A subtle border on the left of the cell */
+    border-left: 3px solid #e74c3c;
 }
 
 </style>
