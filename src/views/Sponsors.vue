@@ -135,6 +135,10 @@
               <input v-model="addWebsite" type="text" class="form-control" />
           </div>
           <div class="mb-2">
+            <label class="form-label">$ Amount</label>
+            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
+          </div>
+          <div class="mb-2">
               <label class="form-label">Image PNG</label>
               <input v-model="addPNG" type="text" class="form-control" />
           </div>
@@ -198,6 +202,10 @@
           <div class="mb-2">
             <label class="form-label">Website URL</label>
             <input v-model="editWebsite" type="text" class="form-control" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">$ Amount</label>
+            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
           </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEdit">
@@ -330,6 +338,7 @@ const addName = ref("");
 const addTier = ref("");
 const addWebsite = ref("");
 const addPNG = ref("");
+const addAmount = ref(0);
 const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
@@ -366,6 +375,7 @@ const editName = ref("");
 const editTier = ref("");
 const editWebsite = ref("");
 const editPNG = ref("");
+const editAmount = ref(0);
 
 // Validate Characters
 const validateName = (name) => {
@@ -484,12 +494,64 @@ const tierRanges = computed(() => {
       range: `${lowerThreshold} - ${higherThreshold}`, 
       id: currentTier.id, 
       lowerThreshold: lower,
-      imageWidth: currentTier.imageWidth, 
-      imageHeight: currentTier.imageHeight,
+      imageWidth: currentTier.width, 
+      imageHeight: currentTier.height,
     });
   }
   return result;
 });
+
+const validateTierAmount = (amount, tierId) => {
+  const selectedTier = tiers.value.find(t => t.id === tierId);
+
+  if(!selectedTier){
+    console.warn("Selected tier ID not found for validation.");
+    return null;
+  }
+
+  const lowerThreshold = Number(selectedTier.lowerThreshold || 0);
+
+  const sortedTiers = [...tiers.value].sort((a, b) =>
+    Number(a.lowerThreshold || 0) - Number(b.lowerThreshold || 0)
+  );
+
+  let upperThreshold = Infinity;
+  let upperThresholdDisplayValue;
+
+  const currentIndex = sortedTiers.findIndex(t => t.id === tierId);
+
+  if(currentIndex !== -1){
+    const nextTier = sortedTiers[currentIndex + 1];
+
+    if(nextTier){
+      const nextLower = Number(nextTier.lowerThreshold);
+
+      upperThreshold = nextLower;
+      upperThresholdDisplayValue = nextLower - 1;
+    }else{
+      upperThreshold = Infinity;
+      upperThresholdDisplayValue = "up";
+    }
+  }else{
+    upperThreshold = Infinity;
+    upperThresholdDisplayValue = "up";
+  }
+
+  if(amount >= lowerThreshold && amount < upperThreshold){
+    return null;
+  }
+  
+  const minRange = formatCurrency(lowerThreshold);
+  
+  let maxRange;
+  if (upperThresholdDisplayValue === "up") {
+      maxRange = "and up";
+  } else {
+      maxRange = formatCurrency(upperThresholdDisplayValue);
+  }
+  
+  return `The entered amount (${formatCurrency(amount)}) does not match the selected tier range (${minRange} - ${maxRange}).`;
+}
 
 const isDeleteButtonDisabled = computed(() => {
   const enteredName = removeTierName.value.trim();
@@ -517,6 +579,7 @@ const fetchSponsorsAndTiers = async () => {
           id: s.id,
           name: s.name,
           website: revertUrlFromServer(s.website),
+          amount: s.amount ?? 0,
           tier: s.tier || "",
           image: s.image || "",
           imageWidth: s.imageWidth ?? null,
@@ -608,6 +671,12 @@ const handleAddSponsor = async () => {
     return;
   }
 
+  const tierValidationMessage = validateTierAmount(addAmount.value, addTier.value);
+  if (tierValidationMessage) {
+      addFormError.value = tierValidationMessage;
+      return;
+  }
+
   const transformedWebsite = transformUrlForServer(addWebsite.value);
 
   try {
@@ -617,6 +686,7 @@ const handleAddSponsor = async () => {
       sponsorName: addName.value,
       sponsorWebsite: transformedWebsite,
       image: addPNG.value || null,
+      amount: addAmount.value,
       sponsorTierId: addTier.value,
       eventId: currentEventId.value,
     });
@@ -638,6 +708,7 @@ const handleAddSponsor = async () => {
     addTier.value = "";
     addWebsite.value = "";
     addPNG.value = "";
+    addAmount.value = 0;
     showAddForm.value = false;
 
   } catch(err) {
@@ -804,6 +875,8 @@ const openEditForm = async (index) => {
     editId.value = sponsor.id;
     editName.value = sponsor.name;
     editTier.value = tiers.value.find(t => t.tier === sponsor.tier)?.id || "";
+    editAmount.value = sponsor.amount;
+    editWebsite.value = revertUrlFromServer(sponsor.website);
     showEditForm.value = true;
     editFormError.value = null;
 
@@ -831,6 +904,12 @@ const handleUpdateSponsor = async () => {
     return;
   }
 
+  const tierValidationMessage = validateTierAmount(editAmount.value, editTier.value);
+  if (tierValidationMessage) {
+      editFormError.value = tierValidationMessage;
+      return;
+  }
+
   const transformedWebsite = transformUrlForServer(editWebsite.value);
 
   try{
@@ -840,14 +919,16 @@ const handleUpdateSponsor = async () => {
           sponsorName: editName.value,
           sponsorWebsite: transformedWebsite,
           image: editPNG.value || null,
+          amount: editAmount.value,
           sponsorTierId: editTier.value,
           eventId: currentEventId.value,
         });
 
         await updateEventSponsor(editId.value, {
             sponsorName: editName.value,
-            sponsorWebsite: editWebsite.value,
+            sponsorWebsite: transformedWebsite,
             image: editPNG.value || null,
+            amount: editAmount.value,
             sponsorTierId: editTier.value ,  //dropdown value
             eventId: currentEventId.value,
         });
@@ -860,6 +941,7 @@ const handleUpdateSponsor = async () => {
           sponsorTierId: editTier.value
         });
 
+        sponsors.value[editIndex.value].amount = editAmount.value;
         sponsors.value[editIndex.value].name = editName.value;
         sponsors.value[editIndex.value].website = editWebsite.value;
         sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
