@@ -102,7 +102,7 @@
             Cancel
           </button>
           
-          <button type="submit" class="btn btn-danger ms-2">
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">
             Confirm Delete
           </button>
         </form>
@@ -133,6 +133,10 @@
           <div class="mb-2">
               <label class="form-label">Website URL</label>
               <input v-model="addWebsite" type="text" class="form-control" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">$ Amount</label>
+            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
           </div>
           <div class="mb-2">
               <label class="form-label">Image PNG</label>
@@ -169,7 +173,7 @@
           <button type="button" class="btn btn-secondary" @click="cancelRemove">
               Cancel
           </button>
-          <button type="submit" class="btn btn-danger ms-2">Confirm Delete</button>
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">Confirm Delete</button>
         </form>
       </div>
     </div>
@@ -198,6 +202,10 @@
           <div class="mb-2">
             <label class="form-label">Website URL</label>
             <input v-model="editWebsite" type="text" class="form-control" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">$ Amount</label>
+            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
           </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEdit">
@@ -301,10 +309,26 @@
                 <tr v-if="sponsors.length === 0">
                   <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
                 </tr>
-                <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
-                  <td class="text-center">{{ sponsor.name }}</td>
-                  <td class="text-center">{{ sponsor.tier }}</td>
-                  <td class="text-center">{{ sponsor.website }}</td>
+                <tr 
+                  v-for="(sponsor, index) in sponsors" 
+                  :key="sponsor.id || index" 
+                  @click="openEditForm(index)" 
+                  style="cursor: pointer"
+                  >
+                  
+                  <td 
+                    class="text-left"
+                    
+                    :class="{ 'highlight-name-needs-update': isSponsorTierInvalid(sponsor, tiers) }"
+                  >
+                    {{ sponsor.name }}
+                  </td>
+                  
+                  <td class="text-left">
+                    {{ sponsor.tier }}
+                  </td>
+                  
+                  <td class="text-left">{{ sponsor.website }}</td>
                 </tr>
               </tbody>
             </table>
@@ -330,6 +354,7 @@ const addName = ref("");
 const addTier = ref("");
 const addWebsite = ref("");
 const addPNG = ref("");
+const addAmount = ref(0);
 const removeName = ref("");
 const showAddForm = ref(false);
 const showRemoveForm = ref(false);
@@ -366,6 +391,7 @@ const editName = ref("");
 const editTier = ref("");
 const editWebsite = ref("");
 const editPNG = ref("");
+const editAmount = ref(0);
 
 // Validate Characters
 const validateName = (name) => {
@@ -484,11 +510,116 @@ const tierRanges = computed(() => {
       range: `${lowerThreshold} - ${higherThreshold}`, 
       id: currentTier.id, 
       lowerThreshold: lower,
-      imageWidth: currentTier.imageWidth, 
-      imageHeight: currentTier.imageHeight,
+      imageWidth: currentTier.width, 
+      imageHeight: currentTier.height,
     });
   }
   return result;
+});
+
+const validateTierAmount = (amount, tierId) => {
+  const selectedTier = tiers.value.find(t => t.id === tierId);
+
+  if(!selectedTier){
+    console.warn("Selected tier ID not found for validation.");
+    return null;
+  }
+
+  const lowerThreshold = Number(selectedTier.lowerThreshold || 0);
+
+  const sortedTiers = [...tiers.value].sort((a, b) =>
+    Number(a.lowerThreshold || 0) - Number(b.lowerThreshold || 0)
+  );
+
+  let upperThreshold = Infinity;
+  let upperThresholdDisplayValue;
+
+  const currentIndex = sortedTiers.findIndex(t => t.id === tierId);
+
+  if(currentIndex !== -1){
+    const nextTier = sortedTiers[currentIndex + 1];
+
+    if(nextTier){
+      const nextLower = Number(nextTier.lowerThreshold);
+
+      upperThreshold = nextLower;
+      upperThresholdDisplayValue = nextLower - 1;
+    }else{
+      upperThreshold = Infinity;
+      upperThresholdDisplayValue = "up";
+    }
+  }else{
+    upperThreshold = Infinity;
+    upperThresholdDisplayValue = "up";
+  }
+
+  if(amount >= lowerThreshold && amount < upperThreshold){
+    return null;
+  }
+  
+  const minRange = formatCurrency(lowerThreshold);
+  
+  let maxRange;
+  if (upperThresholdDisplayValue === "up") {
+      maxRange = "and up";
+  } else {
+      maxRange = formatCurrency(upperThresholdDisplayValue);
+  }
+  
+  return `The entered amount (${formatCurrency(amount)}) does not match the selected tier range (${minRange} - ${maxRange}).`;
+}
+
+const isSponsorTierInvalid = (sponsor, currentTiers) => {
+    const amount = Number(sponsor.amount) || 0;
+    const assignedTierName = sponsor.tier; 
+
+    // Find the currently assigned tier object
+    const assignedTier = currentTiers.find(t => t.tier === assignedTierName);
+    if (!assignedTier) {
+        // Highlight if tier ID is missing (deleted tier)
+        return true; 
+    }
+
+    const lowerThreshold = Number(assignedTier.lowerThreshold || 0);
+
+    // Sort tiers to find the threshold of the next tier
+    const sortedTiers = [...currentTiers].sort((a, b) =>
+        Number(a.lowerThreshold || 0) - Number(b.lowerThreshold || 0)
+    );
+
+    let upperLimit = Infinity;
+    const currentIndex = sortedTiers.findIndex(t => t.tier === assignedTierName);
+
+    if (currentIndex !== -1) {
+        const nextTier = sortedTiers[currentIndex + 1];
+        if (nextTier) {
+            const nextLowerThreshold = Number(nextTier.lowerThreshold || 0);
+            upperLimit = nextLowerThreshold - 1;
+        }
+    }
+    
+    // Check 1: Must be >= lowerThreshold
+    const isAboveLower = amount >= lowerThreshold;
+    
+    // Check 2: Must be <= upperLimit (which is the effective ceiling, e.g., $1,500)
+    const isBelowUpper = amount <= upperLimit;
+
+    // The tier is VALID if BOTH checks pass.
+    return !(isAboveLower && isBelowUpper);
+};
+
+const isDeleteButtonDisabled = computed(() => {
+  const enteredName = removeTierName.value.trim();
+
+  // Checks if it's blank -> should be grayed out
+  if(enteredName === '') return true;
+
+  const tierExists = tiers.value.some(tier => {
+    // Checks if the name exists
+    return tier.tier.toLowerCase() === enteredName.toLocaleLowerCase();
+  });
+
+  return !tierExists;
 });
 
 const fetchSponsorsAndTiers = async () => {
@@ -503,7 +634,9 @@ const fetchSponsorsAndTiers = async () => {
           id: s.id,
           name: s.name,
           website: revertUrlFromServer(s.website),
+          amount: s.amount ?? 0,
           tier: s.tier || "",
+          sponsorTierId: s.tierId || null,
           image: s.image || "",
           imageWidth: s.imageWidth ?? null,
           imageHeight: s.imageHeight ?? null,   
@@ -594,6 +727,12 @@ const handleAddSponsor = async () => {
     return;
   }
 
+  const tierValidationMessage = validateTierAmount(addAmount.value, addTier.value);
+  if (tierValidationMessage) {
+      addFormError.value = tierValidationMessage;
+      return;
+  }
+
   const transformedWebsite = transformUrlForServer(addWebsite.value);
 
   try {
@@ -603,6 +742,7 @@ const handleAddSponsor = async () => {
       sponsorName: addName.value,
       sponsorWebsite: transformedWebsite,
       image: addPNG.value || null,
+      amount: addAmount.value,
       sponsorTierId: addTier.value,
       eventId: currentEventId.value,
     });
@@ -624,6 +764,7 @@ const handleAddSponsor = async () => {
     addTier.value = "";
     addWebsite.value = "";
     addPNG.value = "";
+    addAmount.value = 0;
     showAddForm.value = false;
 
   } catch(err) {
@@ -790,6 +931,8 @@ const openEditForm = async (index) => {
     editId.value = sponsor.id;
     editName.value = sponsor.name;
     editTier.value = tiers.value.find(t => t.tier === sponsor.tier)?.id || "";
+    editAmount.value = sponsor.amount;
+    editWebsite.value = revertUrlFromServer(sponsor.website);
     showEditForm.value = true;
     editFormError.value = null;
 
@@ -817,6 +960,12 @@ const handleUpdateSponsor = async () => {
     return;
   }
 
+  const tierValidationMessage = validateTierAmount(editAmount.value, editTier.value);
+  if (tierValidationMessage) {
+      editFormError.value = tierValidationMessage;
+      return;
+  }
+
   const transformedWebsite = transformUrlForServer(editWebsite.value);
 
   try{
@@ -826,14 +975,16 @@ const handleUpdateSponsor = async () => {
           sponsorName: editName.value,
           sponsorWebsite: transformedWebsite,
           image: editPNG.value || null,
+          amount: editAmount.value,
           sponsorTierId: editTier.value,
           eventId: currentEventId.value,
         });
 
         await updateEventSponsor(editId.value, {
             sponsorName: editName.value,
-            sponsorWebsite: editWebsite.value,
+            sponsorWebsite: transformedWebsite,
             image: editPNG.value || null,
+            amount: editAmount.value,
             sponsorTierId: editTier.value ,  //dropdown value
             eventId: currentEventId.value,
         });
@@ -846,6 +997,7 @@ const handleUpdateSponsor = async () => {
           sponsorTierId: editTier.value
         });
 
+        sponsors.value[editIndex.value].amount = editAmount.value;
         sponsors.value[editIndex.value].name = editName.value;
         sponsors.value[editIndex.value].website = editWebsite.value;
         sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
@@ -964,6 +1116,16 @@ const getCurrentEventId = () => {
   word-break: break-all;
   max-width: 200px;
   text-align: left !important;
+}
+
+.highlight-name-needs-update {
+    /* Subtle background to draw attention */
+    background-color: #ffe6e6 !important; 
+    /* Prominent text color */
+    color: #cc0000 !important;
+    font-weight: bold;
+    /* Optional: A subtle border on the left of the cell */
+    border-left: 3px solid #e74c3c;
 }
 
 </style>
