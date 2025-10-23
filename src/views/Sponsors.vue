@@ -309,10 +309,26 @@
                 <tr v-if="sponsors.length === 0">
                   <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
                 </tr>
-                <tr v-for="(sponsor, index) in sponsors" :key="sponsor.id || index" @click="openEditForm(index)" style="cursor: pointer">
-                  <td class="text-center">{{ sponsor.name }}</td>
-                  <td class="text-center">{{ sponsor.tier }}</td>
-                  <td class="text-center">{{ sponsor.website }}</td>
+                <tr 
+                  v-for="(sponsor, index) in sponsors" 
+                  :key="sponsor.id || index" 
+                  @click="openEditForm(index)" 
+                  style="cursor: pointer"
+                  >
+                  
+                  <td 
+                    class="text-left"
+                    
+                    :class="{ 'highlight-name-needs-update': isSponsorTierInvalid(sponsor, tiers) }"
+                  >
+                    {{ sponsor.name }}
+                  </td>
+                  
+                  <td class="text-left">
+                    {{ sponsor.tier }}
+                  </td>
+                  
+                  <td class="text-left">{{ sponsor.website }}</td>
                 </tr>
               </tbody>
             </table>
@@ -553,6 +569,45 @@ const validateTierAmount = (amount, tierId) => {
   return `The entered amount (${formatCurrency(amount)}) does not match the selected tier range (${minRange} - ${maxRange}).`;
 }
 
+const isSponsorTierInvalid = (sponsor, currentTiers) => {
+    const amount = Number(sponsor.amount) || 0;
+    const assignedTierName = sponsor.tier; 
+
+    // Find the currently assigned tier object
+    const assignedTier = currentTiers.find(t => t.tier === assignedTierName);
+    if (!assignedTier) {
+        // Highlight if tier ID is missing (deleted tier)
+        return true; 
+    }
+
+    const lowerThreshold = Number(assignedTier.lowerThreshold || 0);
+
+    // Sort tiers to find the threshold of the next tier
+    const sortedTiers = [...currentTiers].sort((a, b) =>
+        Number(a.lowerThreshold || 0) - Number(b.lowerThreshold || 0)
+    );
+
+    let upperLimit = Infinity;
+    const currentIndex = sortedTiers.findIndex(t => t.tier === assignedTierName);
+
+    if (currentIndex !== -1) {
+        const nextTier = sortedTiers[currentIndex + 1];
+        if (nextTier) {
+            const nextLowerThreshold = Number(nextTier.lowerThreshold || 0);
+            upperLimit = nextLowerThreshold - 1;
+        }
+    }
+    
+    // Check 1: Must be >= lowerThreshold
+    const isAboveLower = amount >= lowerThreshold;
+    
+    // Check 2: Must be <= upperLimit (which is the effective ceiling, e.g., $1,500)
+    const isBelowUpper = amount <= upperLimit;
+
+    // The tier is VALID if BOTH checks pass.
+    return !(isAboveLower && isBelowUpper);
+};
+
 const isDeleteButtonDisabled = computed(() => {
   const enteredName = removeTierName.value.trim();
 
@@ -581,6 +636,7 @@ const fetchSponsorsAndTiers = async () => {
           website: revertUrlFromServer(s.website),
           amount: s.amount ?? 0,
           tier: s.tier || "",
+          sponsorTierId: s.tierId || null,
           image: s.image || "",
           imageWidth: s.imageWidth ?? null,
           imageHeight: s.imageHeight ?? null,   
@@ -1060,6 +1116,16 @@ const getCurrentEventId = () => {
   word-break: break-all;
   max-width: 200px;
   text-align: left !important;
+}
+
+.highlight-name-needs-update {
+    /* Subtle background to draw attention */
+    background-color: #ffe6e6 !important; 
+    /* Prominent text color */
+    color: #cc0000 !important;
+    font-weight: bold;
+    /* Optional: A subtle border on the left of the cell */
+    border-left: 3px solid #e74c3c;
 }
 
 </style>
