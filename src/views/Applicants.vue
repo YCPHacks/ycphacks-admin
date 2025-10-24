@@ -54,6 +54,80 @@
     <!-- Add Download User emails button-->
     <!-- Add Export All Users button -->
 
+    <div v-if="showEditUserForm" class="modal fade show d-block" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit User: {{ editUserData.firstName }} {{ editUserData.lastName }}</h5>
+            <button type="button" class="btn-close" @click="cancelEditUser"></button>
+          </div>
+          
+          <div class="modal-body">
+            <div v-if="editUserError" class="alert alert-danger">{{ editUserError }}</div>
+            
+            <form @submit.prevent="handleUpdateUser">
+              <div class="mb-3">
+                <label for="editFirstName" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="editFirstName" v-model="editUserData.firstName" required>
+              </div>
+
+              <div class="mb-3">
+                <label for="editLastName" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="editLastName" v-model="editUserData.lastName" required>
+              </div>
+
+              <div class="mb-3">
+                <label for="editEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="editEmail" v-model="editUserData.email" required>
+              </div>
+              
+              <div class="mb-3" v-if="isOscar">
+                <label for="editRole" class="form-label">Role</label>
+                <select class="form-select" id="editRole" v-model="editUserData.role">
+                  <option value="OSCAR">OSCAR</option>
+                  <option value="STAFF">STAFF</option>
+                  <option value="PARTICIPANT">PARTICIPANT</option>
+              </select>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label for="editAge" class="form-label">Age</label>
+                  <input type="number" class="form-control" id="editAge" v-model="editUserData.age">
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="editPhone" class="form-label">Phone Number</label>
+                  <input type="text" class="form-control" id="editPhone" v-model="editUserData.phoneNumber">
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="editSchool" class="form-label">School</label>
+                  <input type="text" class="form-control" id="editSchool" v-model="editUserData.school">
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="editTShirtSize" class="form-label">T-Shirt Size</label>
+                  <input type="text" class="form-control" id="editTShirtSize" v-model="editUserData.tShirtSize">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="editDietary" class="form-label">Dietary Restrictions</label>
+                  <input type="text" class="form-control" id="editDietary" v-model="editUserData.dietaryRestrictions">
+                </div>
+              </div>
+              
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @click="cancelEditUser">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showEditUserForm" class="modal-backdrop fade show"></div>
+
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
       <div class="table-responsive">
@@ -78,7 +152,8 @@
                 No users found
               </td>
             </tr>
-            <tr v-for="user in filteredUsers" :key="user.id">
+            <tr v-for="(user, index) in filteredUsers" :key="user.id"
+              @click="openEditUserForm(index)" style="cursor: pointer;">
               <!-- Add Check Boxes for Check in -->
                <td v-if="activeTab === 'all'" class="role-column">
                 <div class="role-badge-wrapper">
@@ -95,6 +170,7 @@
                   type="checkbox" 
                   :checked="user.checkIn" 
                   @change="toggleCheckIn(user.id)" 
+                  @class.stop
                   class="form-check-input"
                 >
               </td>
@@ -166,6 +242,12 @@ export default {
       users: [],
       searchQuery: "",
       activeTab: "participant", // 'all' or 'staff'
+
+      showEditUserForm: false,
+      editUserIndex: null,
+      editUserData: {},
+      editUserOriginalData: {},
+      editUserError: null,
     };
   },
   computed: {
@@ -310,7 +392,63 @@ export default {
           // Fallback for unexpected roles
           return 'bg-secondary text-white';
       }
-    }
+    },
+    openEditUserForm(index){
+      const user = this.filteredUsers[index];
+
+      const originalIndex = this.users.findIndex(u => u.id === user.id);
+
+      if(originalIndex === -1){
+        console.error("Could not find user in original array.")
+        return;
+      }
+
+      this.editUserIndex = originalIndex;
+      this.showEditUserForm = true;
+      this.editUserError = null;
+
+      const {password, mlhCodeOfConduct, mlhPrivaryPolicy, mlhEmails, ...editableData } = user
+      this.editUserData = {...editableData};
+      this.editUserOriginalData = { ... editableData };
+    },
+    async handleUpdateUser(){
+      this.editUserError = null;
+
+      const userId = this.editUserData.id;
+
+      try{
+        const payload ={
+          firstName: this.editUserData.firstName,
+          lastName: this.editUserData.lastName,
+          age: this.editUserData.age,
+          email: this.editUserData.email,
+          phoneNumber: this.editUserData.phoneNumber,
+          school: this.editUserData.school,
+          tShirtSize: this.editUserData.tShirtSize,
+          dietaryRestrictions: this.editUserData.dietaryRestrictions,
+          role: this.editUserData.role,
+        };
+
+        await axios.put(`http://localhost:3000/user/${userId}`, payload);
+
+        const userToUpdate = this.users[this.editUserIndex];
+        if(userToUpdate){
+          Object.assign(userToUpdate, this.editUserData);
+        }
+        this.showEditUserForm = false;
+        this.editUserIndex = null;
+      } catch (err) {
+        console.error("Error updating user:", err);
+        const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during user update.";
+        this.editUserError = errorMessage;
+      }
+    },
+    cancelEditUser() {
+      this.showEditUserForm = false;
+      this.editUserIndex = null;
+      this.editUserError = null;
+      this.editUserData = {};
+    },
   },
 };
 </script>
