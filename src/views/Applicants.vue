@@ -54,7 +54,7 @@
     <!-- Add Download User emails button-->
     <!-- Add Export All Users button -->
 
-    <div v-if="showEditUserForm" class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div v-if="showEditUserForm && isOscar" class="modal fade show d-block" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
@@ -83,11 +83,20 @@
               
               <div class="mb-3" v-if="isOscar">
                 <label for="editRole" class="form-label">Role</label>
-                <select class="form-select" id="editRole" v-model="editUserData.role">
-                  <option value="OSCAR">OSCAR</option>
-                  <option value="STAFF">STAFF</option>
-                  <option value="PARTICIPANT">PARTICIPANT</option>
-              </select>
+                
+                <select 
+                  class="form-select" 
+                  id="editRole" 
+                  v-model="editUserData.role"
+                >
+                  <option 
+                      v-for="role in userRoles" 
+                      :key="role.value" 
+                      :value="role.value"
+                  >
+                      {{ role.text }}
+                  </option>
+                </select>
               </div>
               
               <div class="row">
@@ -108,7 +117,19 @@
               <div class="row">
                 <div class="col-md-6 mb-3">
                   <label for="editTShirtSize" class="form-label">T-Shirt Size</label>
-                  <input type="text" class="form-control" id="editTShirtSize" v-model="editUserData.tShirtSize">
+                  <select 
+                      class="form-select" 
+                      id="editTShirtSize" 
+                      v-model="editUserData.tShirtSize"
+                  >
+                      <option 
+                          v-for="size in tShirtSizes" 
+                          :key="size.value" 
+                          :value="size.value"
+                      >
+                          {{ size.text }}
+                      </option>
+                  </select>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label for="editDietary" class="form-label">Dietary Restrictions</label>
@@ -126,7 +147,7 @@
       </div>
     </div>
 
-    <div v-if="showEditUserForm" class="modal-backdrop fade show"></div>
+    <div v-if="showEditUserForm && isOscar" class="modal-backdrop fade show"></div>
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
@@ -248,6 +269,22 @@ export default {
       editUserData: {},
       editUserOriginalData: {},
       editUserError: null,
+
+      tShirtSizes: [
+        { value: null, text: '-Select One-' },
+        { value: "XS", text: 'XS' },
+        { value: "S", text: 'S' },
+        { value: "M", text: 'M' },
+        { value: "L", text: 'L' },
+        { value: "XL", text: 'XL' },
+        { value: "2XL", text: '2XL' },
+        { value: "3XL", text: '3XL' }
+      ],
+      userRoles: [
+        { value: 'PARTICIPANT', text: 'Participant' },
+        { value: 'STAFF', text: 'Staff' },
+        { value: 'OSCAR', text: 'Oscar' }
+      ]
     };
   },
   computed: {
@@ -410,6 +447,10 @@ export default {
       const {password, mlhCodeOfConduct, mlhPrivaryPolicy, mlhEmails, ...editableData } = user
       this.editUserData = {...editableData};
       this.editUserOriginalData = { ... editableData };
+
+      if (this.editUserData.role) {
+        this.editUserData.role = this.editUserData.role.toUpperCase();
+      }
     },
     async handleUpdateUser(){
       this.editUserError = null;
