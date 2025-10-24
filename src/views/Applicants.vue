@@ -60,6 +60,7 @@
         <table class="table table-striped table-hover">
           <thead class="thead-light">
             <tr>
+              <th class="text-left role-column-header" v-if="activeTab === 'all'">Role</th>
               <th class="text-left" v-if="activeTab === 'participant'">Checked In?</th>
               <th class="text-left">First Name</th>
               <th class="text-left">Last Name</th>
@@ -79,6 +80,16 @@
             </tr>
             <tr v-for="user in filteredUsers" :key="user.id">
               <!-- Add Check Boxes for Check in -->
+               <td v-if="activeTab === 'all'" class="role-column">
+                <div class="role-badge-wrapper">
+                  <span 
+                    class="badge role-badge text-center" 
+                    :class="getRoleBadgeClass(user.role)"
+                  >
+                    {{ user.role.toUpperCase() }}
+                  </span>
+                </div>
+              </td>
               <td class="text-center align-middle table-checkbox-center" v-if="activeTab === 'participant'">
                 <input 
                   type="checkbox" 
@@ -280,6 +291,25 @@ export default {
       }
 
       return 'badge bg-danger text-white';
+    },
+    getRoleBadgeClass(role) {
+      if (!role) return 'bg-secondary';
+      
+      const normalizedRole = role.toLowerCase().trim();
+      
+      switch (normalizedRole) {
+        case 'oscar':
+          // Highest authority, stands out immediately
+          return 'bg-danger text-white'; 
+        case 'staff':
+          // Important, but secondary to Oscar
+          return 'bg-primary text-white';
+        case 'participant':
+          return 'bg-success text-white'; 
+        default:
+          // Fallback for unexpected roles
+          return 'bg-secondary text-white';
+      }
     }
   },
 };
@@ -317,7 +347,61 @@ export default {
 .table {
   margin: 0;
   font-size: 0.875rem;
-  /* min-width: 1200px; */
+  table-layout: auto;
+}
+
+.table thead th.role-column-header{
+  /* Apply shrink-wrap to header */
+  width: 130px;
+  white-space: nowrap;
+  text-align: center;
+  max-width: 130px;
+}
+
+.table tbody tr td.role-column {
+  width: 130px;
+  max-width: 130px;
+  padding: 0.3rem 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  
+  vertical-align: middle;
+  text-align: center;
+}
+
+.table tbody tr td:last-child{
+  width: 1px;
+  white-space: nowrap;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.role-badge-wrapper {
+  width: 130px;
+  max-width: 130px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.badge.role-badge{
+  /* padding: 0.1rem 2px !important; */
+  padding-top: 0.1rem !important;
+  padding-bottom: 0.1rem !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  font-size: 0.8em !important;
+  display: block;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+  margin: 0;
+  text-align: center;
+}
+
+.table tbody tr td .badge{
+  font-weight: normal;
 }
 
 .table td:nth-child(5){
