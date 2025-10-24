@@ -43,6 +43,56 @@
       <p>Participants can apply for YCPHacks Events.</p>
     </div>
 
+    <!-- T-shirt Sizes Displayed -->
+    <!-- Need to add logic for if the event applications are closed -> shouldn't show if closed -->
+    <div class="tshirt-summary-row">
+      
+      <div class="tshirt-box bg-all">
+        <h3>👕 All Users</h3>
+        <p class="total-count">Total People: {{ allTally.totalUsers }}</p>
+        <p class="shirt-count">Order: <strong>{{ allTally.totalShirts }} Shirts</strong></p>
+        <div class="size-details">
+          <span 
+            v-for="(count, size) in allTally.tally" 
+            :key="size" 
+            :class="{'text-danger fw-bold': size === 'N/A'}"
+          >
+            <span class="fw-bold">{{ size }}:</span> {{ count }}
+          </span>
+        </div>
+      </div>
+
+      <div class="tshirt-box bg-participant">
+        <h3>🏃‍♂️ Participants</h3>
+        <p class="total-count">Total People: {{ participantTally.totalUsers }}</p>
+        <p class="shirt-count">Order: <strong>{{ participantTally.totalShirts }} Shirts</strong></p>
+        <div class="size-details">
+          <span 
+            v-for="(count, size) in participantTally.tally" 
+            :key="size" 
+            :class="{'text-danger fw-bold': size === 'N/A'}"
+          >
+            <span class="fw-bold">{{ size }}:</span> {{ count }}
+          </span>
+        </div>
+      </div>
+
+      <div class="tshirt-box bg-staff">
+        <h3>🧑‍💻 Staff</h3>
+        <p class="total-count">Total People: {{ staffTally.totalUsers }}</p>
+        <p class="shirt-count">Order: <strong>{{ staffTally.totalShirts }} Shirts</strong></p>
+        <div class="size-details">
+          <span 
+            v-for="(count, size) in staffTally.tally" 
+            :key="size" 
+            :class="{'text-danger fw-bold': size === 'N/A'}"
+          >
+            <span class="fw-bold">{{ size }}:</span> {{ count }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- Upcoming Events Table -->
     <div class="upcoming-events">
       <h3>Upcoming Activities</h3>
@@ -91,6 +141,8 @@
 <script>
 import axios from "axios";
 
+const SIZE_ORDER = ['S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
+
 export default {
   name: "Dashboard",
   data() {
@@ -107,6 +159,18 @@ export default {
       return this.users.filter(user =>
         user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar'
       ).length;
+    },
+    allTally() {
+      return this.calculateTally(this.users);
+    },
+    participantTally() {
+      const participants = this.users.filter(u => u.role.toLowerCase() === "participant");
+      return this.calculateTally(participants);
+    },
+    staffTally() {
+      // Assuming 'oscar' is also counted as staff
+      const staff = this.users.filter(u => u.role.toLowerCase() === "staff" || u.role.toLowerCase() === "oscar");
+      return this.calculateTally(staff);
     }
   },
   created() {
@@ -123,6 +187,36 @@ export default {
       } catch (error) {
         console.error("Error fetching users:", error);
       }
+    },
+    calculateTally(userList) {
+      const tally = userList.reduce((acc, user) => {
+        const size = user.tShirtSize 
+          ? user.tShirtSize.toUpperCase().trim() 
+          : 'N/A';
+        
+        if (size) {
+          acc[size] = (acc[size] || 0) + 1;
+        }
+        return acc;
+      }, {}); // Must initialize with {}
+
+      const orderedTally = {};
+      let totalShirts = 0;
+
+      SIZE_ORDER.forEach(key => {
+        if (tally[key]) {
+          orderedTally[key] = tally[key];
+          if (key !== 'N/A') { 
+            totalShirts += tally[key];
+          }
+        }
+      });
+
+      return {
+        tally: orderedTally,
+        totalShirts: totalShirts,
+        totalUsers: userList.length
+      };
     }
   }
 };
@@ -254,5 +348,59 @@ export default {
   margin-top: 10px;
   border-radius: 5px;
   cursor: pointer;
+}
+
+.tshirt-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Three columns, equally sized */
+  gap: 15px;
+  margin-top: 15px; /* Add some space below top metrics */
+}
+
+.tshirt-box {
+  background-color: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tshirt-box h3 {
+  margin-top: 0;
+  font-size: 18px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 5px;
+}
+
+.tshirt-box .total-count,
+.tshirt-box .shirt-count {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+}
+
+.tshirt-box .shirt-count strong {
+  font-size: 16px;
+  color: #007bff; /* Highlight the actual order number */
+}
+
+.tshirt-box .size-details {
+  margin-top: 10px;
+  padding-top: 5px;
+  border-top: 1px dashed #ddd;
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap; /* Allows sizes to wrap if needed */
+  gap: 8px; /* Spacing between size: count pairs */
+}
+
+/* Custom Backgrounds for T-Shirt Boxes */
+.bg-all {
+  background-color: #e3f2fd; /* Light Blue */
+}
+.bg-participant {
+  background-color: #fce4ec; /* Light Pink/Rose */
+}
+.bg-staff {
+  background-color: #e8f5e9; /* Light Green */
 }
 </style>
