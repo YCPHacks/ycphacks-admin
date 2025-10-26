@@ -1,25 +1,40 @@
 <template>
   <div class="container mt-5">
-    <h2 class="mb-4 text-center">All Activities for {{ event.eventName }}</h2>
+    <h2 class="mb-4 text-center">All Activities for {{ event.eventName || 'No Event Selected' }}</h2>
     <!-- Create Activity Button -->
     <button @click="showCreateActivityModal = true" class="btn btn-primary create-activity-btn">Create Activity</button>
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
       <div class="table-responsive">
+        <!-- Search Input -->
+        <div class="mb-4">
+          <input type="text" v-model="searchQuery" class="form-control" placeholder="Search by activity name or description..." />
+        </div>
         <table class="table table-striped table-hover">
           <thead class="thead-light">
           <tr>
-            <th class="text-left">Activity</th>
-            <th class="text-left">Date</th>
-            <th class="text-center">Description</th>
+            <th class="text-left sortable" @click="sortBy('activityName')">
+              Activity
+              <span v-if="sortKey === 'activityName'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
+            </th>
+            <th class="text-left sortable" @click="sortBy('activityDate')">
+              Date
+              <span v-if="sortKey === 'activityDate'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
+            </th>
+            <th class="text-center sortable" @click="sortBy('activityDescription')">
+              Description
+              <span v-if="sortKey === 'activityDescription'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
+            </th>
+            <th></th> <!-- For edit buttons -->
           </tr>
           </thead>
+
           <tbody>
-          <tr v-if="getActivities === 0">
+          <tr v-if="getActivities.length === 0">
             <td colspan="4" class="text-center">No activities</td>
           </tr>
-          <tr v-for="activity in getActivities" :key="activity.id">
+          <tr v-for="activity in sortedActivities" :key="activity.id">
             <td>{{ activity.activityName }}</td>
             <td>{{ activity.activityDate }}</td>
             <td>{{ activity.activityDescription }}</td>
@@ -37,22 +52,30 @@
       <div class="modal-content">
         <h3>Create Activity</h3>
         <form @submit.prevent="createActivity">
-          <div class="form-group">
+          <div class="form-group" style="margin: 10px 0">
             <label for="activityName">Activity Name</label>
             <input type="text" id="activityName" v-model="activityForm.activityName" class="form-control" required />
+            <p v-if="errors.activityName" class="text-danger">{{ errors.activityName }}</p>
           </div>
-          <div class="form-group">
+
+          <div class="form-group" style="margin-bottom: 10px">
             <label for="date">Date</label>
             <input type="datetime-local" id="date" v-model="activityForm.activityDate" class="form-control" required />
+            <p v-if="errors.activityDate" class="text-danger">{{ errors.activityDate }}</p>
           </div>
-          <div class="form-group">
+
+          <div class="form-group" style="margin-bottom: 10px">
             <label for="activityDescription">Description</label>
             <textarea type="text" id="activityDescription" v-model="activityForm.activityDescription" class="form-control" required />
+            <p v-if="errors.activityDescription" class="text-danger">{{ errors.activityDescription }}</p>
           </div>
+
           <div class="modal-actions">
             <button type="submit" class="btn btn-success">Save</button>
             <button type="button" class="btn btn-secondary" @click="showCreateActivityModal = false">Cancel</button>
           </div>
+
+          <p class="error">{{ message }}</p>
         </form>
       </div>
     </div>
@@ -62,25 +85,30 @@
       <div class="modal-content">
         <h3>Update Activity</h3>
         <form @submit.prevent="updateActivity">
-          <div class="form-group">
+          <div class="form-group" style="margin: 10px 0">
             <label for="updateActivityName">Activity Name</label>
             <input type="text" id="updateActivityName" v-model="activityForm.activityName" class="form-control" required/>
+            <p v-if="errors.activityName" class="text-danger">{{ errors.activityName }}</p>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" style="margin-bottom: 10px">
             <label for="updateDate">Date</label>
             <input type="datetime-local" id="updateDate" v-model="activityForm.activityDate" class="form-control" required/>
+            <p v-if="errors.activityDate" class="text-danger">{{ errors.activityDate }}</p>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" style="margin-bottom: 10px">
             <label for="updateActivityDescription">Description</label>
             <textarea id="updateActivityDescription" v-model="activityForm.activityDescription" class="form-control" required></textarea>
+            <p v-if="errors.activityDescription" class="text-danger">{{ errors.activityDescription }}</p>
           </div>
 
           <div class="modal-actions">
             <button type="submit" class="btn btn-success">Update</button>
             <button type="button" class="btn btn-secondary" @click="showUpdateActivityModal = false">Cancel</button>
           </div>
+
+          <p class="error">{{ message }}</p>
         </form>
       </div>
     </div>
@@ -106,6 +134,9 @@ export default {
         endDate: new Date('2025-11-09T21:00:00.000Z'),
         canChange: true
       },
+      sortKey: 'activityName', // default column
+      sortOrder: 'asc',        // 'asc' or 'desc'
+      searchQuery: '',
       activityForm: {
         id: null,
         eventId: 1, // Event ID
@@ -120,6 +151,30 @@ export default {
   },
   computed: {
     ...mapGetters(['getActivities']),
+    sortedActivities() {
+      if (!this.getActivities || this.getActivities.length === 0) return [];
+
+      //  ️Filter by search query
+      const filtered = this.getActivities.filter(a =>
+          a.activityName.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          a.activityDescription.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+
+      // Sort the filtered results
+      return [...filtered].sort((a, b) => {
+        let aVal = a[this.sortKey];
+        let bVal = b[this.sortKey];
+
+        if (this.sortKey === 'activityDate') {
+          aVal = new Date(aVal);
+          bVal = new Date(bVal);
+        }
+
+        if (aVal < bVal) return this.sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return this.sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
   },
   created() {
     this.fetchActivities();
@@ -131,6 +186,14 @@ export default {
       await store.dispatch('getAllActivities', this.event.id);
 
       this.isLoading = false;
+    },
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sortKey = key;
+        this.sortOrder = 'asc';
+      }
     },
     async createActivity() {
       this.isLoading = true;
@@ -280,5 +343,20 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.error {
+  padding: 5px;
+  color: red;
+  text-align: center;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable:hover {
+  background-color: #f5f5f5;
 }
 </style>
