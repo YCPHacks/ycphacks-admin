@@ -8,6 +8,7 @@ import Hardware from '@/views/Hardware.vue';
 import store from "@/store/store.js";
 import EventEdit from "@/views/EventEdit.vue";
 import Sponsors from "@/views/Sponsors.vue";
+import Activities from "@/views/Activities.vue";
 
 
 const routes = [
@@ -15,6 +16,7 @@ const routes = [
     { path: '/dashboard', component: Dashboard },
     { path: '/applicants', component: Applicants },
     { path: '/events', component: Events, name: 'Events' },
+    { path: '/activities', component: Activities, name: 'Activities' },
     { path: '/login', component: Login},
     { path: '/hardware', component: Hardware},
     {
