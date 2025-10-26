@@ -6,7 +6,8 @@ import UserAdapter from "./UserAdapter.js";
 export default createStore({
     state: {
         user: {},
-        sponsors: []
+        sponsors: [],
+        activities: []
     },
     mutations: {
         setUser(state, user) {
@@ -19,6 +20,12 @@ export default createStore({
         },
         setSponsors(state, sponsors){
             state.sponsors = sponsors;
+        },
+        setActivities(state, activities) {
+            state.activities = activities;
+        },
+        clearActivities(state) {
+            state.activities = [];
         }
     },
     actions: {
@@ -80,11 +87,81 @@ export default createStore({
             }catch(err){
                 console.error("Error fetching sponsors: ", err);
             }
+        },
+        async createActivity({ commit }, activity) {
+            try {
+                if (!activity || Object.keys(activity).length === 0) {
+                    return { success: false, message: "Activity is empty" };
+                }
+                const response = await fetch('http://localhost:3000/event/activity/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(activity)
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    return { success: true, message: data.message || "Activity created successfully" };
+                } else {
+                    return { success: false, message: data.message || "Failed to create activity", errors: data.errors };
+                }
+            } catch (error) {
+                return { success: false, message: error.response?.data?.message || "Network or server error while creating activity" };
+            }
+        },
+        async updateActivity({ commit }, activity) {
+            try {
+                if (!activity || Object.keys(activity).length === 0) {
+                    return { success: false, message: "Activity is empty" };
+                }
+                const response = await fetch('http://localhost:3000/event/activity', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(activity)
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    return { success: true, message: data.message || "Activity updated successfully" };
+                } else {
+                    return { success: false, message: data.message || "Failed to update activity", errors: data.errors };
+                }
+            } catch (error) {
+                return { success: false, message: error.response?.data?.message || "Network or server error while updating activity" };
+            }
+        },
+        async getAllActivities({ commit }, eventId) {
+            try {
+                if (!eventId) return;
+                const response = await axios.get(`http://localhost:3000/event/activity/${eventId}`);
+
+                // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
+                const activities = response.data.activities.map(activity => {
+                    activity.activityDate = (new Date(activity.activityDate)).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                        timeZone: "America/New_York"
+                    });
+
+                    return activity;
+                });
+
+                commit("setActivities", activities);
+                return {success: true, message: response.data.message};
+            } catch (error) {
+                return {success: false, message: error.response?.data?.message || "Error fetching activity"};
+            }
         }
     },
     getters: {
         isAuthenticated: (state) => !!state.user,
         UserRole: (state) => state.user?.role || null,
-        allSponsors: (state) => state.sponsors
+        allSponsors: (state) => state.sponsors,
+        getActivities: (state) => state.activities
     },
 });
