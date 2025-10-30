@@ -97,6 +97,12 @@
                       {{ role.text }}
                   </option>
                 </select>
+                <div v-if="revertMessage" class="alert alert-danger mt-2" role="alert">
+                  {{ revertMessage }}
+                </div>
+                <div v-else-if="isPrivilegedRole(editUserData.role) && isYorkCollegeUser" class="alert alert-warning mt-2" role="alert">
+                  Role change to '{{ editUserData.role }}' is permitted for York College users.
+                </div>
               </div>
               
               <div class="row">
@@ -258,6 +264,21 @@ const ALLERGY_KEYWORDS = [
 
 export default {
   name: "UserManagement",
+  watch: {
+    'editUserData.role'(newRole, oldRole) {
+      if(this.showEditUserForm && newRole !== oldRole) {
+        this.checkRoleChangeEligibility(newRole, oldRole);
+      }
+    },
+    'editUserData.school'(newRole, oldRole) {
+      if(this.showEditUserForm && this.isPrivilegedRole(this.editUserData.role)){
+        this.checkSchoolChangeClearsError();
+      }
+    }
+  },
+  created() {
+    this.fetchUsers();
+  },
   data() {
     return {
       users: [],
@@ -284,7 +305,9 @@ export default {
         { value: 'PARTICIPANT', text: 'Participant' },
         { value: 'STAFF', text: 'Staff' },
         { value: 'OSCAR', text: 'Oscar' }
-      ]
+      ],
+
+      privilegedRoles: ['OSCAR', 'STAFF']
     };
   },
   computed: {
@@ -352,12 +375,40 @@ export default {
         tally: orderedTally,
         totalShirts: totalShirts
       };
+    },
+    isYorkCollegeUser() {
+      if (!this.editUserData.school) return false;
+      const schoolInput = this.editUserData.school.toUpperCase();
+      return schoolInput.includes('YORK COLLEGE');
     }
   },
-  created() {
-    this.fetchUsers();
-  },
   methods: {
+    isPrivilegedRole(role){
+      if (!role) return false;
+      return this.privilegedRoles.includes(role.toUpperCase());
+    },
+    checkRoleChangeEligibility(newRole, oldRole){
+      this.revertMessage = null;
+
+      if(this.isPrivilegedRole(newRole)){
+        if(!this.isYorkCollegeUser){
+          this.$nextTick(() => {
+            this.editUserData.role = oldRole;
+          });
+
+          this.revertMessage = `Access Denied: Only users from a 'York College' institution can be assigned the ${newRole} role. Role reverted to ${oldRole}.`;
+        }else{
+          this.revertMessage = null;
+        }
+      }
+    },
+    checkSchoolChangeClearsError() {
+      if(this.revertMessage && this.isPrivilegedRole(this.editUserData.role)){
+        if(this.isYorkCollegeUser){
+          this.revertMessage = null;
+        }
+      }
+    },
     async fetchUsers() {
       try {
         const response = await axios.get("http://localhost:3000/user/all");
@@ -646,6 +697,19 @@ table tbody tr td.table-checkbox-center .form-check-input{
 /* Ensure the search bar is still positioned correctly below */
 .mb-4 {
     margin-bottom: 1.5rem !important;
+}
+
+.revert-messgae{
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #dc3545;
+  border-left: 5px solid #dc3545;
+  border-radius: 0.25rem;
+
+  background-color: #f8d7da;
+  color: #721c24;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 </style>
