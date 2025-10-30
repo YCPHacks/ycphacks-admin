@@ -40,6 +40,7 @@
             <td>{{ activity.activityDescription }}</td>
             <td class="text-center">
               <button class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
+              <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
             </td>
           </tr>
           </tbody>
@@ -72,7 +73,7 @@
 
           <div class="modal-actions">
             <button type="submit" class="btn btn-success">Save</button>
-            <button type="button" class="btn btn-secondary" @click="showCreateActivityModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showCreateActivityModal = false; resetActivityForm()">Cancel</button>
           </div>
 
           <p class="error">{{ message }}</p>
@@ -105,10 +106,34 @@
 
           <div class="modal-actions">
             <button type="submit" class="btn btn-success">Update</button>
-            <button type="button" class="btn btn-secondary" @click="showUpdateActivityModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showUpdateActivityModal = false; resetActivityForm()">Cancel</button>
           </div>
 
           <p class="error">{{ message }}</p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal for Deleting an Activity -->
+    <div v-if="showDeleteActivityModal && UserRole === 'oscar'" class="modal-overlay">
+      <div class="modal-content">
+        <h5>Delete Activity</h5>
+        <form @submit.prevent="deleteActivity">
+          <p class="alert alert-warning">
+            <strong>⚠️ Are you absolutely sure?</strong>
+            This will permanently delete the activity and cannot be undone.
+          </p>
+
+          <p>Please confirm the name of the activity you wish to delete:</p>
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="activityForm.activityName" type="text" class="form-control" />
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" @click="showDeleteActivityModal = false;">Cancel</button>
+            <button type="submit" class="btn btn-danger" :disabled="!activityForm.activityName || activityForm.activityName !== deleteActivityName">Delete</button>
+          </div>
         </form>
       </div>
     </div>
@@ -127,6 +152,7 @@ export default {
     return {
       showCreateActivityModal: false,
       showUpdateActivityModal: false,
+      showDeleteActivityModal: false,
       event: { // NOTE THIS IS TEMPORARY AND SHOULD BE REPLACED WITH A CALL TO THE BACKEND TO GET THE CORRECT EVENT
         id: 1,
         eventName: 'YCP Hacks 2025',
@@ -144,13 +170,14 @@ export default {
         activityDate: '',
         activityDescription: ''
       },
+      deleteActivityName: '',
       isLoading: false,
       errors: {},
       message: ''
     };
   },
   computed: {
-    ...mapGetters(['getActivities']),
+    ...mapGetters(['getActivities', 'UserRole']),
     sortedActivities() {
       if (!this.getActivities || this.getActivities.length === 0) return [];
 
@@ -221,7 +248,6 @@ export default {
       this.isLoading = true;
 
       const activityToSend = {
-        id: this.currentActivityId,
         ...this.activityForm,
         activityDate: new Date(this.activityForm.activityDate).toISOString()
       };
@@ -240,6 +266,24 @@ export default {
       if (!this.errors) this.errors = {};
       this.isLoading = false;
     },
+    async deleteActivity() {
+      this.isLoading = true;
+
+      if (this.activityForm.activityName === this.deleteActivityName) {
+        const result = await store.dispatch('deleteActivity', this.activityForm.id);
+
+        if (result.success) {
+          await this.fetchActivities(); // Refresh activity list
+          this.showDeleteActivityModal = false; // Close modal
+          this.resetActivityForm();
+          this.deleteActivityName = '';
+        } else {
+          this.message = result.message;
+        }
+      }
+
+      this.isLoading = false;
+    },
     formatForDatetimeLocal(dateString) {
       const date = new Date(dateString);
       // Offset to local time and trim seconds and milliseconds
@@ -253,6 +297,11 @@ export default {
         activityDate: this.formatForDatetimeLocal(activity.activityDate)
       };
       this.showUpdateActivityModal = true;
+    },
+    openDeleteActivityModal(activity) {
+      this.deleteActivityName = activity.activityName;
+      this.activityForm.id = activity.id;
+      this.showDeleteActivityModal = true;
     },
     resetActivityForm() {
       this.activityForm = {
@@ -283,14 +332,31 @@ export default {
   border-radius: 0.75rem;
 }
 
-.table-responsive {
-  overflow-x: auto;
-}
-
 .table {
   margin: 0;
   font-size: 0.875rem;
   min-width: 1200px;
+}
+
+/* Adjust column widths manually */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+  width: 25%; /* Activity column */
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 15%; /* Date column */
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  width: 45%; /* Description column */
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  width: 15%; /* Edit button column */
 }
 
 .thead-light th {

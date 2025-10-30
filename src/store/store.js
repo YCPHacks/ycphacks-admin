@@ -130,6 +130,28 @@ export default createStore({
                 return { success: false, message: error.response?.data?.message || "Network or server error while updating activity" };
             }
         },
+        async deleteActivity({ commit }, id) {
+            try {
+                if (!id) {
+                    return { success: false, message: "Something went wrong" };
+                }
+
+                const response = await fetch(`http://localhost:3000/event/activity/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    return { success: true, message: data.message || "Activity deleted successfully" };
+                } else {
+                    return { success: false, message: data.message || "Failed to delete activity", errors: data.errors };
+                }
+            } catch (error) {
+                return { success: false, message: error.message || "Network or server error while deleting activity" };
+            }
+        },
         async getAllActivities({ commit }, eventId) {
             try {
                 if (!eventId) return;
