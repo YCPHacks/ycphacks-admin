@@ -23,25 +23,29 @@
     </ul>
 
     <!-- Add Total Users -->
-    <div class="d-flex align-items-center mb-2 tshirt-compact-row">
+    <div class="tshirt-compact-row items-center">
     
-      <h5 class="me-4 text-nowrap">
+      <h5 class="me-4 text-nowrap mb-0 lh-1">
         👕 T-Shirt Sizes ({{ activeTab.toUpperCase() }}):
       </h5>
       
       <div 
         v-for="(count, size) in tshirtSizeTally.tally" 
         :key="size" 
-        class="me-3 text-nowrap"
+        class="me-3 text-nowrap lh-1"
         :class="{'text-danger fw-bold': size === 'N/A'}"
       >
         <span class="fw-bold">{{ size }}:</span> {{ count }}
       </div>
 
-      <!-- Add Total T-Shirt Sizes -->
-      <span class="badge bg-primary fs-6 ms-auto text-nowrap">
+      <span class="badge bg-primary fs-6 text-nowrap me-3 ms-auto mb-0">
         Total Order: {{ tshirtSizeTally.totalShirts }}
       </span>
+      
+      <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="isOscar">
+        Export Users
+      </button>
+      
     </div>
 
     <!-- Search Input -->
@@ -53,6 +57,64 @@
     <!-- - Also for changing user's role -->
     <!-- Add Download User emails button-->
     <!-- Add Export All Users button -->
+
+    <!-- EXPORT USERS MODAL -->
+    <div v-if="showExportModal" class="modal d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Export User Fields</h5>
+            <button type="button" class="btn-close" @click="closeExportModal"></button>
+          </div>
+          <div class="modal-body">
+            
+            <!-- ROLE FILTER -->
+            <div class="mb-4">
+              <p class="fw-bold">Role Filter:</p>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" id="roleParticipant" value="PARTICIPANT" v-model="exportRoleFilter">
+                <label class="form-check-label" for="roleParticipant">Participant</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" id="roleStaff" value="STAFF" v-model="exportRoleFilter">
+                <label class="form-check-label" for="roleStaff">Staff</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" id="roleAll" value="ALL" v-model="exportRoleFilter">
+                <label class="form-check-label" for="roleAll">All</label>
+              </div>
+            </div>
+
+            <hr>
+
+            <!-- FIELD SELECTION -->
+            <p class="fw-bold">Select the data fields (columns) you want to appear in the CSV file:</p>
+            
+            <div class="d-flex mb-3">
+              <button class="btn btn-sm btn-outline-secondary me-2" @click="toggleAllExportFields(true)">Select All Fields</button>
+              <button class="btn btn-sm btn-outline-secondary" @click="toggleAllExportFields(false)">Deselect All Fields</button>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4" v-for="field in exportFields" :key="field.key">
+                <div class="form-check">
+                  <!-- The v-model ensures the checkbox state is tied to the field.checked property -->
+                  <input class="form-check-input" type="checkbox" :id="'field-' + field.key" v-model="field.checked">
+                  <label class="form-check-label" :for="'field-' + field.key">
+                    {{ field.label }}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeExportModal">Cancel</button>
+            <button type="button" class="btn btn-success" @click="handleExportSubmit">Export</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div v-if="showEditUserForm && isOscar" class="modal fade show d-block" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-lg" role="document">
@@ -262,6 +324,30 @@ const ALLERGY_KEYWORDS = [
   'egg',
 ];
 
+const ALL_EXPORT_FIELDS = [
+  { key: 'firstName', label: 'First Name', default: true },
+  { key: 'lastName', label: 'Last Name', default: true },
+  { key: 'email', label: 'Email', default: true },
+  { key: 'phoneNumber', label: 'Phone Number', default: true },
+  { key: 'gender', label: 'Gender', default: true },
+  { key: 'linkedInUrl', label: 'LinkedIn URL', default: false },
+  
+  { key: 'country', label: 'Country', default: true },
+  { key: 'tShirtSize', label: 'T-Shirt Size', default: true },
+  { key: 'dietaryRestrictions', label: 'Dietary Restrictions', default: true },
+  { key: 'school', label: 'School', default: true },
+  { key: 'hackathonsAttended', label: 'Hackathons Attended', default: true },
+  
+  { key: 'pronouns', label: 'Pronouns', default: true },
+  { key: 'age', label: 'Age', default: true },
+  { key: 'major', label: 'Major', default: true },
+  { key: 'graduationYear', label: 'Graduation Year', default: true },
+  { key: 'levelOfStudy', label: 'Level of Study', default: true },
+
+  { key: 'checkIn', label: 'Checked In', default: false },
+  { key: 'role', label: 'Internal Role', default: false },
+];
+
 export default {
   name: "UserManagement",
   watch: {
@@ -291,6 +377,8 @@ export default {
       editUserOriginalData: {},
       editUserError: null,
 
+      revertMessage: null,
+
       tShirtSizes: [
         { value: null, text: '-Select One-' },
         { value: "XS", text: 'XS' },
@@ -307,7 +395,11 @@ export default {
         { value: 'OSCAR', text: 'Oscar' }
       ],
 
-      privilegedRoles: ['OSCAR', 'STAFF']
+      privilegedRoles: ['OSCAR', 'STAFF'],
+
+      showExportModal: false,
+      exportRoleFilter: 'PARTICIPANT',
+      exportFields: []
     };
   },
   computed: {
@@ -357,7 +449,7 @@ export default {
         return acc;
       }, {});
 
-      const order = ['S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
+      const order = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
       const orderedTally = {};
       let totalShirts = 0;
 
@@ -383,6 +475,80 @@ export default {
     }
   },
   methods: {
+    /**
+     * Initializes the exportFields array based on the ALL_EXPORT_FIELDS constant.
+     */
+    initializeExportFields() {
+      this.exportFields = ALL_EXPORT_FIELDS.map(f => ({
+        key: f.key,
+        label: f.label,
+        checked: f.default,
+      }));
+    },
+    
+    /**
+     * Toggles the checked status of all export fields.
+     */
+    toggleAllExportFields(checked) {
+      this.exportFields.forEach(field => {
+        field.checked = checked;
+      });
+    },
+
+    /**
+     * Handles the full export process based on modal selections.
+     */
+    handleExportSubmit() {
+      // 1. Determine users to export based on Role Filter
+      const role = this.exportRoleFilter;
+      let usersToExport = [];
+
+      if (role === 'ALL') {
+        usersToExport = this.users;
+      } else if (role === 'PARTICIPANT') {
+        usersToExport = this.users.filter(user => user.role.toUpperCase() === 'PARTICIPANT');
+      } else if (role === 'STAFF') {
+        // Note: This includes 'OSCAR' as staff since privileged roles were defined as staff.
+        usersToExport = this.users.filter(user => this.isPrivilegedRole(user.role));
+      }
+
+      if (usersToExport.length === 0) {
+        console.warn(`No users found for the selected role: ${role}.`);
+        // Show a simple error message to the user instead of just console.warn
+        // In a real app, you would use a notification system here.
+        alert(`Cannot export: No users found for the selected role filter (${role}).`);
+        return;
+      }
+
+      // 2. Determine fields to export
+      const selectedFields = this.exportFields.filter(f => f.checked);
+
+      if (selectedFields.length === 0) {
+        console.warn("Please select at least one data field (column) to export.");
+        alert("Please select at least one data field (column) to export.");
+        return;
+      }
+
+      // 3. Initiate CSV export with filtered data and selected columns
+      this.exportToCSV(usersToExport, selectedFields);
+      this.closeExportModal();
+    },
+
+    openExportModal() {
+      this.exportFields = ALL_EXPORT_FIELDS.map(f => ({
+        key: f.key,
+        label: f.label,
+        checked: f.default,
+      }));
+      
+      this.showExportModal = true;
+      // Optionally reset to default filter/fields every time it opens
+      this.exportRoleFilter = 'PARTICIPANT';
+    },
+
+    closeExportModal() {
+        this.showExportModal = false;
+    },
     isPrivilegedRole(role){
       if (!role) return false;
       return this.privilegedRoles.includes(role.toUpperCase());
@@ -435,6 +601,63 @@ export default {
         console.error(`Error toggling check-in for user ${userId}:`, err);
       }
     },
+    exportToCSV(usersToExport, selectedFields){
+      if (usersToExport.length === 0){
+        console.warn("No users to export.");
+        return;
+      }
+
+      // Helper function to safely enclose data in quotes and escape internal quotes
+      const sanitizeValue = (value) => {
+        if (value === null || value === undefined) return '""';
+        
+        // Convert to string and handle boolean/numeric values
+        let stringValue = String(value);
+
+        // Improved handling for boolean values in CSV export
+        if (typeof value === 'boolean' || (typeof value === 'number' && (value === 0 || value === 1))) {
+          stringValue = value ? 'Yes' : 'No';
+        }
+
+        // Escape double quotes by doubling them up
+        stringValue = stringValue.replace(/"/g, '""');
+
+        // Enclose the entire value in double quotes
+        return `"${stringValue}"`;
+      };
+
+      // 1. Generate the Header Row (using labels from selectedFields)
+      const headerRow = selectedFields.map(field => sanitizeValue(field.label)).join(',');
+
+      // 2. Generate the Data Rows
+      const dataRows = usersToExport.map(user => {
+        // Map each field key to the corresponding value from the user object
+        const row = selectedFields.map(field => {
+          const value = user[field.key];
+          return sanitizeValue(value);
+        }).join(',');
+        return row;
+      });
+
+      // 3. Combine Header and Data Rows
+      const csvContent = [headerRow, ...dataRows].join('\n');
+
+      // 4. Create a Blob and Download Link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'user_export.csv');
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
+      
+      console.log("CSV export initiated.");
+    },
     getDietaryRestriction(restriction){
       if(!restriction || restriction.toLowerCase() === 'none' || restriction.toLowerCase() === 'null'){
         return '';
@@ -617,8 +840,8 @@ export default {
 
 .badge.role-badge{
   /* padding: 0.1rem 2px !important; */
-  padding-top: 0.1rem !important;
-  padding-bottom: 0.1rem !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
   padding-left: 0.5rem !important;
   padding-right: 0.5rem !important;
   font-size: 0.8em !important;
@@ -678,20 +901,25 @@ table tbody tr td.table-checkbox-center .form-check-input{
 }
 
 .tshirt-compact-row {
-    background-color: #f8f9fa; /* Light background for visibility */
-    border: 1px solid #dee2e6;
-    padding: 8px 15px; /* Smaller padding */
-    border-radius: 0.5rem;
-    font-size: 0.9rem; /* Slightly smaller font */
-    display: flex; /* Ensures flexible alignment */
-    flex-wrap: nowrap; /* CRITICAL: Prevents wrapping to multiple lines */
-    overflow-x: auto; /* Allows scrolling if the list gets too long */
+  background-color: #f8f9fa; /* Light background for visibility */
+  border: 1px solid #dee2e6;
+  padding: 8px 15px; /* Smaller padding */
+  border-radius: 0.5rem;
+  font-size: 0.9rem; /* Slightly smaller font */
+  display: flex; /* Ensures flexible alignment */
+  flex-wrap: nowrap; /* CRITICAL: Prevents wrapping to multiple lines */
+  overflow-x: auto; /* Allows scrolling if the list gets too long */
+  align-items: center !important;
 }
 
 .tshirt-compact-row h5 {
     font-size: 1.1rem; /* Adjust heading size */
-    margin-bottom: 0;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
     font-weight: 700;
+    line-height: 1.6 !important;
 }
 
 /* Ensure the search bar is still positioned correctly below */
@@ -712,5 +940,15 @@ table tbody tr td.table-checkbox-center .form-check-input{
   font-weight: 500;
 }
 
+/* Add this new CSS block to manually fix the vertical alignment of buttons/badges */
+.tshirt-compact-row .badge, 
+.tshirt-compact-row .btn {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  /* Moves the badge and button DOWN by 1 pixel */
+  transform: none !important; 
+  margin-bottom: 0 !important;
+  flex-shrink: 0;
+}
 </style>
 
