@@ -2,12 +2,15 @@ import {createStore, mapGetters} from 'vuex';
 import axios from "axios";
 import router from '../router/index.js';
 import UserAdapter from "./UserAdapter.js";
+import { formatDateToEST } from "@/utils/formatDate.js";
 
 export default createStore({
     state: {
         user: {},
         sponsors: [],
-        activities: []
+        activities: [],
+        events: [],
+        event: {}
     },
     mutations: {
         setUser(state, user) {
@@ -26,6 +29,18 @@ export default createStore({
         },
         clearActivities(state) {
             state.activities = [];
+        },
+        setEvents(state, events) {
+            state.events = events;
+        },
+        clearEvents(state) {
+            state.events = [];
+        },
+        setEvent(state, event) {
+            state.events = event;
+        },
+        clearEvent(state) {
+            state.event = null;
         }
     },
     actions: {
@@ -159,16 +174,7 @@ export default createStore({
 
                 // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
                 const activities = response.data.activities.map(activity => {
-                    activity.activityDate = (new Date(activity.activityDate)).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: true,
-                        timeZone: "America/New_York"
-                    });
+                    activity.activityDate = formatDateToEST(activity.activityDate);
 
                     return activity;
                 });
@@ -178,12 +184,128 @@ export default createStore({
             } catch (error) {
                 return {success: false, message: error.response?.data?.message || "Error fetching activity"};
             }
+        },
+        async createEvent({ commit }, event) {
+            try {
+                if (!event || Object.keys(event).length === 0) {
+                    return { success: false, message: "Event is empty" };
+                }
+                const response = await fetch('http://localhost:3000/event/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(event)
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    return { success: true, message: data.message || "Event created successfully" };
+                } else {
+                    return { success: false, message: data.message || "Failed to create event", errors: data.errors };
+                }
+            } catch (error) {
+                return { success: false, message: error.response?.data?.message || "Network or server error while creating event" };
+            }
+        },
+        async updateEvent({ commit }, event) {
+            try {
+                if (!event || Object.keys(event).length === 0) {
+                    return { success: false, message: "Event is empty" };
+                }
+                const response = await fetch('http://localhost:3000/event/update', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(event)
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    return { success: true, message: data.message || "Event updated successfully" };
+                } else {
+                    return { success: false, message: data.message || "Failed to update event", errors: data.errors };
+                }
+            } catch (error) {
+                return { success: false, message: error.response?.data?.message || "Network or server error while updating event" };
+            }
+        },
+        async deleteEvent({ commit }, id) {
+            try {
+                if (!id) {
+                    return { success: false, message: "Something went wrong" };
+                }
+
+                const response = await fetch(`http://localhost:3000/event/delete/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    return { success: true, message: data.message || "Event deleted successfully" };
+                } else {
+                    return { success: false, message: data.message || "Failed to delete event", errors: data.errors };
+                }
+            } catch (error) {
+                return { success: false, message: error.message || "Network or server error while deleting event" };
+            }
+        },
+        async getAllEvents({ commit }) {
+            try {
+                const response = await axios.get(`http://localhost:3000/event/all`);
+
+                // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
+                const events = response.data.events.map(event => ({
+                    ...event,
+                    startDate: formatDateToEST(event.startDate),
+                    endDate: formatDateToEST(event.endDate)
+                }));
+
+                commit("setEvents", events);
+                return {success: true, message: response.data.message};
+            } catch (error) {
+                return {success: false, message: error.response?.data?.message || "Error fetching events"};
+            }
+        },
+        async getEventById({ commit }, eventId) {
+            try {
+                if (!eventId) {
+                    return { success: false, message: "Something went wrong" };
+                }
+                const response = await axios.get(`http://localhost:3000/event/${eventId}`);
+
+                // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
+                const event = response.data
+                event.startDate = formatDateToEST(event.startDate);
+                event.endDate = formatDateToEST(event.endDate)
+
+                commit("setEvent", event);
+                return {success: true, message: response.data.message};
+            } catch (error) {
+                return {success: false, message: error.response?.data?.message || "Error fetching event"};
+            }
+        },
+        async getActiveEvent({ commit }) {
+            try {
+                const response = await axios.get(`http://localhost:3000/event/active`);
+
+                // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
+                const event = response.data
+                event.startDate = formatDateToEST(event.startDate);
+                event.endDate = formatDateToEST(event.endDate)
+
+                commit("setEvent", event);
+                return {success: true, message: response.data.message};
+            } catch (error) {
+                return {success: false, message: error.response?.data?.message || "Error fetching active event"};
+            }
         }
     },
     getters: {
         isAuthenticated: (state) => !!state.user,
         UserRole: (state) => state.user?.role || null,
         allSponsors: (state) => state.sponsors,
-        getActivities: (state) => state.activities
+        getActivities: (state) => state.activities,
+        getEvents: (state) => state.events,
+        getEvent: (state) => state.event
     },
 });
