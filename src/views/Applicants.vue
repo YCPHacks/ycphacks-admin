@@ -924,7 +924,7 @@ table tbody tr td.table-checkbox-center .form-check-input{
 
 /* Ensure the search bar is still positioned correctly below */
 .mb-4 {
-    margin-bottom: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
 }
 
 .revert-messgae{
