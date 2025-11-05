@@ -73,34 +73,34 @@
                         <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
                     </div>
                     
-                    <!-- Team Name (Fixed v-model) -->
+                    <!-- Team Name -->
                     <div class="mb-3">
                         <label class="form-label">Team Name *</label>
                         <input v-model="formData.teamName" type="text" class="form-control" required />
                     </div>
                     
-                    <!-- Project Name (Fixed v-model) -->
+                    <!-- Project Name -->
                     <div class="mb-3">
                         <label class="form-label">Project Name</label>
                         <input v-model="formData.projectName" type="text" class="form-control"/>
                     </div>
                     
-                    <!-- Project Description (Fixed v-model) -->
+                    <!-- Project Description -->
                     <div class="mb-3">
                         <label class="form-label">Project Description</label>
                         <textarea v-model="formData.projectDescription" class="form-control"></textarea>
                     </div>
                     
-                    <!-- Presentation Link (Fixed v-model) -->
+                    <!-- Presentation Link -->
                     <div class="mb-3">
                         <label class="form-label">Presentation Link</label>
                         <input v-model="formData.presentationLink" type="text" class="form-control"/>
                     </div>
                     
-                    <!-- GitHub Link (Fixed v-model) -->
+                    <!-- GitHub Link -->
                     <div class="mb-3">
                         <label class="form-label">GitHub Link</label>
-                        <input v-model="formData.gitHubLink" type="text" class="form-control"/>
+                        <input v-model="formData.githubLink" type="text" class="form-control"/>
                     </div>
                     
                     <!-- Participants Selection -->
@@ -148,6 +148,96 @@
                 </form>
             </div>
         </div>
+        
+        <!-- Edit Team Modal -->
+        <div v-if="showEditForm" class="popup-overlay">
+            <div class="card p-4 popup">
+                
+                <header class="modal-header">
+                    <h5 class="modal-title">Edit Team: {{ editFormData.teamName }}</h5>
+                    <button type="button" class="btn-close" @click="cancelEdit"></button>
+                </header>
+                
+                <div class="modal-body">
+                    <div v-if="error || success" :class="['alert p-2 mb-3', error ? 'alert-danger' : 'alert-success']" role="alert">
+                        <i class="bi bi-info-circle-fill"></i> {{ error || success }}
+                    </div>
+                    
+                    <form @submit.prevent="handleUpdateTeam" id="editTeamForm"> 
+                        <div v-if="editFormError" class="alert alert-danger p-2 mb-3">
+                            <i class="bi bi-exclamation-triangle-fill"></i> {{ editFormError }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Team Name *</label>
+                            <input v-model="editFormData.teamName" type="text" class="form-control" required />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Project Name</label>
+                            <input v-model="editFormData.projectName" type="text" class="form-control"/>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Project Description</label>
+                            <textarea v-model="editFormData.projectDescription" class="form-control"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Presentation Link</label>
+                            <input v-model="editFormData.presentationLink" type="text" class="form-control"/>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">GitHub Link</label>
+                            <input v-model="editFormData.githubLink" type="text" class="form-control"/>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Team Participants (Select {{ MIN_PARTICIPANTS }} or more) *</label>
+                            
+                            <div v-if="loading && showEditForm" class="text-info fst-italic">Loading participants...</div>
+                            
+                            <div v-else-if="allAvailableUsers.length > 0">
+                                <select 
+                                    v-model="editSelectedParticipantsIds" 
+                                    multiple 
+                                    class="form-control"
+                                    required
+                                    :size="Math.min(10, allAvailableUsers.length + 1)"
+                                >
+                                    <option 
+                                        v-for="p in allAvailableUsers" 
+                                        :key="p.id" :value="p.id" >
+                                        {{ formatParticipants(p) }}
+                                    </option>
+                                </select>
+                                <div class="form-text text-muted">Hold Ctrl (Cmd on Mac) to select multiple participants.</div>
+                            </div>
+                            
+                            <p v-else class="text-muted small p-2 bg-light rounded">
+                                No participants available.
+                            </p>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="cancelEdit">
+                        Cancel
+                    </button>
+                    <button 
+                        type="submit" 
+                        form="editTeamForm"
+                        class="btn btn-primary"
+                        :disabled="loading || !isTeamMinMetForEdit"
+                    >
+                        <span v-if="loading">Saving...</span>
+                        <span v-else>Save Changes</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -164,11 +254,11 @@ export default{
             users: [],
             unassignedUsers: [],
 
-            showEditTeamForm: false,
-            editTeamIndex: null,
-            editTeamData: {},
-            editTeamOriginalData: {},
-            editTeamError: null,
+            showEditForm: false,
+            editFormData: {},
+            editSelectedParticipantsIds: [],
+            editTeamId: null,
+            editFormError: null,
 
             showAddForm: false, // Controls modal visibility
             addFormError: false,
@@ -215,11 +305,26 @@ export default{
         isTeamMinMet() {
             return this.selectedParticipantsIds.length >= this.MIN_PARTICIPANTS;
         },
-        visualSlots() {
-            const totalSlots = Math.max(this.VISUAL_SLOTS, this.selectedParticipantsIds.length);
-            // Create an array of nulls and map over it to insert participants
-            return Array(totalSlots).fill(null).map((_, index) => this.selectedParticipantsIds[index] || null);
+        isTeamMinMetForEdit(){
+            return this.editSelectedParticipantsIds.length >= this.MIN_PARTICIPANTS;
         },
+        allAvailableUsers(){
+            const currentTeamMembers = this.editFormData.participants || [];
+            const unassigned = this.unassignedUsers;
+
+            const uniqueUsersMap = new Map();
+            [...currentTeamMembers, ...unassigned].forEach(user => {
+                if(user && user.id){
+                    uniqueUsersMap.set(user.id, user);
+                }
+            });
+
+            return Array.from(uniqueUsersMap.values()).sort((a, b) => {
+                const nameA = a.lastName || a.firstName || '';
+                const nameB = b.lastName || b.firstName || '';
+                return nameA.localeCompare(nameB);
+            });
+        }
     },
     created() {
         this.fetchTeams();
@@ -285,8 +390,61 @@ export default{
             }
         },
         openEditTeamForm(item) {
-          // Placeholder for your existing edit logic
-          console.log("Opening edit form for:", item);
+          this.error = null;
+          this.success = null;
+          this.editFormError = null;
+
+          this.showAddForm = false;
+
+          this.editTeamId = item.id;
+          this.editFormData = { ...item };
+
+          this.editSelectedParticipantsIds = item.participants ? item.participants.map(p => p.id) : [];
+
+          this.showEditForm = true;
+        },
+
+        cancelEdit(){
+            this.showEditForm = false;
+            this.editFormData = {};
+            this.editSelectedParticipantsIds = [];
+            this.editTeamId = null;
+            this.editFormError = null;
+            this.loading = false;
+            this.error = null;
+            this.success = null;
+        },
+
+        async handleUpdateTeam(){
+            this.loading = true;
+            this.editFormError = null;
+
+            if(!this.isTeamMinMetForEdit){
+                this.editFormError = `Team must have at least ${this.MIN_PARTICIPANTS} participant(s).`;
+                this.loading = false;
+                return;
+            }
+
+            try{
+                const teamId = this.editTeamId;
+                const payload = {
+                    ...this.editFormData,
+                    participantIds: this.editSelectedParticipantsIds,
+                };
+
+                const response = await axios.put(`${API_BASE_URL}/teams/${teamId}`, payload);
+                this.success = response.data.message || 'Team updated successfully!';
+
+                await this.fetchTeams();
+                await this.fetchUnassignedUsers();
+
+                setTimeout(() => {
+                    this.cancelEdit();
+                    this.success = null;
+                }, 1500);
+            }catch(err){
+                this.editFormError = err.response?.data?.message || "Failed to update team. Please check the form and try again.";
+            }
         },
 
         // --- Add Team Modal Methods ---
@@ -384,8 +542,14 @@ export default{
 .table {
   margin: 0;
   font-size: 0.875rem;
-  table-layout: fixed;
+  table-layout: auto;
   width: 100%;
+}
+
+.table th, .table td{
+    
+    word-break: break-word;
+    white-space: normal;
 }
 
 .thead-light th {
@@ -394,7 +558,6 @@ export default{
   font-weight: 600;
   vertical-align: middle;
   text-align: center;
-  white-space: nowrap;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
