@@ -120,7 +120,7 @@
                                 <option 
                                     v-for="p in checkedInUnassignedUsers" 
                                     :key="p.id" :value="p.id" >
-                                    {{ p.firstName }} {{ p.lastName }} ({{ p.email }})
+                                    {{ formatParticipants(p) }}
                                 </option>
                             </select>
                             <div class="form-text text-muted">Hold Ctrl (Cmd on Mac) to select multiple participants.</div>
@@ -210,7 +210,7 @@ export default{
         },
         checkedInUnassignedUsers(){
             // Retained for use in the Add Team modal
-            return this.unassignedUsers.filter(user => user.checkIn === 1);
+            return this.unassignedUsers;
         },
         isTeamMinMet() {
             return this.selectedParticipantsIds.length >= this.MIN_PARTICIPANTS;
@@ -235,26 +235,51 @@ export default{
             }
         },
         formatParticipants(participants){
-            if(!participants || participants.length === 0){
+            if (!participants) {
                 return 'No members assigned';
             }
-            return participants.map(p => p.name || p.id).join(', ');
+
+            let participantsArray = participants;
+            
+            if (!Array.isArray(participants) && typeof participants === 'object') {
+                participantsArray = [participants];
+            }else if (!Array.isArray(participants)) {
+                console.warn("Participants data received in an unexpected non-array, non-object format:", participants);
+                return 'Data error';
+            }
+            
+            if (participantsArray.length === 0) {
+                return 'No members assigned';
+            }
+
+            return participantsArray.map(p => {
+                const firstName = p?.firstName || '';
+                const lastName = p?.lastName || '';
+                const name = p?.name;
+                const id = p?.id;
+
+                if (firstName && lastName) {
+                    return `${firstName} ${lastName}`;
+                }
+                if (name) {
+                    return name;
+                }
+                return `ID: ${id || 'Unknown'}`;
+            }).join(', ');
         },
         async fetchUnassignedUsers(){
             try{
                 const res = await axios.get(`${API_BASE_URL}/teams/unassignedParticipants`);
+                
                 this.unassignedUsers = res.data.data.map(participant => {
-                    // Check if userDetails exists. If not, default to an empty object {} to prevent crash.
-                    const userDetails = participant.userDetails || {};
-
                     return {
-                        id: userDetails.id || null, 
-                        firstName: userDetails.firstName || 'N/A',
-                        lastName: userDetails.lastName || 'N/A',
-                        email: userDetails.email || 'N/A',
-                        checkIn: userDetails.checkIn === 1,
+                        id: participant.id,
+                        firstName: participant.firstName,
+                        lastName: participant.lastName,
+                        email: participant.email,
+                        checkIn: participant.checkIn === true || participant.checkIn === 1, 
                     };
-                }); 
+                });
             }catch(err){
                 console.error("Error fetching unassigned users:", err);
             }
@@ -270,6 +295,10 @@ export default{
             this.showAddForm = true;
             this.addFormError = null;
             this.showRemoveForm = false;
+
+            this.loading = true; 
+            await this.fetchUnassignedUsers();
+            this.loading = false;
         },
         handleCancel() {
             // Reset form state and close modal
@@ -455,5 +484,10 @@ export default{
 .popup {
   max-width: 400px;
   width: 100%;
+
+  max-height: 90vh;
+  overflow-y: auto;
+
+  padding-bottom: 20px;
 }
 </style>
