@@ -2,20 +2,6 @@
     <div class="container mt-5">
         <h2 class="mb-4 text-center">Team Registration</h2>
 
-        <!-- Tabs -->
-        <ul class="nav nav-tabs mb-4">
-            <li class="nav-item">
-                <button class="nav-link" :class="{ active: activeTab === 'Teams' }" @click="activeTab = 'Teams'">
-                    Teams
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" :class="{ active: activeTab === 'notInTeam' }" @click="activeTab = 'notInTeam'">
-                    Participants Not in Team
-                </button>
-            </li>
-        </ul>
-
         <div class="d-flex justify-content-end gap-2 mb-3">
             <!-- Add Team Button -->
             <div class="text-end mb-3">
@@ -28,7 +14,7 @@
         <div class="row mt-4">
             <div class="col-md-12 mb-4">
                 <h4 class="mb-3">
-                    {{ activeTab === 'Teams' ? 'Team List' : 'Unassigned Users' }}
+                    Team List
                 </h4>
 
                 <div class="table-container shadow-lg rounded overflow-hidden">
@@ -45,7 +31,7 @@
                                 <tr v-if="filteredTeamData.length === 0">
                                     <!-- Colspan should match the number of dynamic headers -->
                                     <td :colspan="tableHeaders.length" class="alert alert0info p-2 text-center">
-                                        {{ activeTab === 'Teams' ? 'No Teams Available' : 'All participants are assigned to a team.' }}
+                                        No Teams Available
                                     </td>
                                 </tr>
                                 <tr 
@@ -55,7 +41,7 @@
                                     style="cursor: pointer;"
                                 >
                                     <td v-for="header in tableHeaders" :key="header.key" class="text-center">
-                                        <span v-if="header.key === 'participants' && activeTab === 'Teams'">
+                                        <span v-if="header.key === 'participants'">
                                             {{ formatParticipants(item.participants) }}
                                         </span>
                                         <span v-else>
@@ -121,18 +107,18 @@
                     <div class="mb-4">
                         <label class="form-label">Initial Participants (Select {{ MIN_PARTICIPANTS }} or more) *</label>
                         
-                        <div v-if="loading" class="text-info fst-italic">Loading participants...</div>
+                        <div v-if="loading && showAddForm" class="text-info fst-italic">Loading participants...</div>
                         
-                        <div v-else-if="unassignedUsers.length > 0">
+                        <div v-else-if="checkedInUnassignedUsers.length > 0">
                             <select 
                                 v-model="selectedParticipantsIds" 
                                 multiple 
                                 class="form-control"
                                 required
-                                :size="Math.min(10, unassignedUsers.length + 1)"
+                                :size="Math.min(10, checkedInUnassignedUsers.length + 1)"
                             >
                                 <option 
-                                    v-for="p in unassignedUsers" 
+                                    v-for="p in checkedInUnassignedUsers" 
                                     :key="p.id" :value="p.id" >
                                     {{ p.firstName }} {{ p.lastName }} ({{ p.email }})
                                 </option>
@@ -177,7 +163,6 @@ export default{
             teams: [],
             users: [],
             unassignedUsers: [],
-            activeTab: "Teams",
 
             showEditTeamForm: false,
             editTeamIndex: null,
@@ -185,7 +170,6 @@ export default{
             editTeamOriginalData: {},
             editTeamError: null,
 
-            // New state for Add New Team Modal
             showAddForm: false, // Controls modal visibility
             addFormError: false,
             showRemoveForm: false,
@@ -210,32 +194,23 @@ export default{
             return this.$store.getters.UserRole === 'oscar';
         },
         filteredTeamData() {
-            if(this.activeTab === 'Teams'){
-                return this.teams;
-            }else if(this.activeTab === 'notInTeam'){
-                return this.unassignedUsers;
-            }
-            return [];
+            // Since tabs are removed, this always returns teams
+            return this.teams;
         },
         tableHeaders() {
-            if (this.activeTab === 'Teams') {
-                // Headers for the Team List
-                return [
-                    { key: 'teamName', label: 'Team Name' },
-                    { key: 'participants', label: 'Users' },
-                    { key: 'projectName', label: 'Project Name' },
-                    { key: 'projectDescription', label: 'Project Description' },
-                    { key: 'presentationLink', label: 'Presentation Link' },
-                    { key: 'githubLink', label: 'GitHub Link' },
-                ];
-            } else {
-                // Headers for Unassigned Participants
-                return [
-                    { key: 'firstName', label: 'First Name' },
-                    { key: 'lastName', label: 'Last Name' },
-                    { key: 'email', label: 'Email Address' }
-                ];
-            }
+            // Since tabs are removed, this always returns the Team List headers
+            return [
+                { key: 'teamName', label: 'Team Name' },
+                { key: 'participants', label: 'Users' },
+                { key: 'projectName', label: 'Project Name' },
+                { key: 'projectDescription', label: 'Project Description' },
+                { key: 'presentationLink', label: 'Presentation Link' },
+                { key: 'githubLink', label: 'GitHub Link' },
+            ];
+        },
+        checkedInUnassignedUsers(){
+            // Retained for use in the Add Team modal
+            return this.unassignedUsers.filter(user => user.checkIn === 1);
         },
         isTeamMinMet() {
             return this.selectedParticipantsIds.length >= this.MIN_PARTICIPANTS;
@@ -268,7 +243,18 @@ export default{
         async fetchUnassignedUsers(){
             try{
                 const res = await axios.get(`${API_BASE_URL}/teams/unassignedParticipants`);
-                this.unassignedUsers = res.data.data;
+                this.unassignedUsers = res.data.data.map(participant => {
+                    // Check if userDetails exists. If not, default to an empty object {} to prevent crash.
+                    const userDetails = participant.userDetails || {};
+
+                    return {
+                        id: userDetails.id || null, 
+                        firstName: userDetails.firstName || 'N/A',
+                        lastName: userDetails.lastName || 'N/A',
+                        email: userDetails.email || 'N/A',
+                        checkIn: userDetails.checkIn === 1,
+                    };
+                }); 
             }catch(err){
                 console.error("Error fetching unassigned users:", err);
             }
@@ -322,7 +308,7 @@ export default{
 
             try {
                 // --- Actual API Call (Uncomment when API is ready) ---
-                // const response = await axios.post(`${API_BASE_URL}/teams/add`, teamPayload);
+                const response = await axios.post(`${API_BASE_URL}/teams/create`, teamPayload);
                 
                 // --- Mock API success for demonstration ---
                 await new Promise(resolve => setTimeout(resolve, 1000)); 
@@ -356,21 +342,7 @@ export default{
   position: relative;
 }
 
-.nav-tabs {
-  border-bottom: 1px solid #dee2e6;
-}
-
-.nav-link {
-  color: #495057;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-}
-
-.nav-link.active {
-  background-color: #f8f9fa;
-  border-color: #dee2e6 #dee2e6 #fff;
-  font-weight: bold;
-}
+/* Removed nav-tabs and nav-link styles as tabs are gone */
 
 .table-container {
   border-radius: 0.75rem;
