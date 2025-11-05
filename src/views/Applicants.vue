@@ -259,7 +259,7 @@
                   type="checkbox" 
                   :checked="user.checkIn" 
                   @change="toggleCheckIn(user.id)" 
-                  @class.stop
+                  @click.stop
                   class="form-check-input"
                 >
               </td>
