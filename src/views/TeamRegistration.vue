@@ -9,6 +9,11 @@
                     Add Team
                 </button>
             </div>
+            <div v-if="isOscar" class="text-end mb-3">
+                <button class="btn btn-primary" @click="toggleRemoveForm">
+                    Remove Team
+                </button>
+            </div>
         </div>
 
         <div class="row mt-4">
@@ -148,6 +153,53 @@
                 </form>
             </div>
         </div>
+
+        <!-- Remove Team Modal -->
+         <div v-if="showRemoveForm && isOscar" class="popup-overlay">
+            <div class="card p-4 popup">
+                <header class="modal-header">
+                    <h5 class="modal-title text-danger">Confirm Team Deletion</h5>
+                    <button type="button" class="btn-close" @click="cancelRemove"></button>
+                </header>
+
+                <form @submit.prevent="handleRemoveTeam">
+                    <div v-if="removeFormError" class="alert alert-danger p-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill"></i> {{ removeFormError }}
+                    </div>
+
+                    <p class="alert alert-warning">
+                        ⚠️ **WARNING:** This will permanently delete the team.
+                        All assigned participants will become unassigned. This cannot be undone.
+                    </p>
+                    
+                    <p>To confirm deletion, please select the team name:</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Select Team to Delete *</label>
+                        <select v-model="teamIdForDeletion" class="form-control" required @change="updateTeamNameForDeletion">
+                            <option :value="null" disabled>-- Select a Team --</option>
+                            <option v-for="team in teams" :key="team.id" :value="team.id">
+                                {{ team.teamName }}
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="modal-footer justify-content-end">
+                        <button type="button" class="btn btn-secondary" @click="cancelRemove">
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            class="btn btn-danger ms-2" 
+                            :disabled="isDeleteButtonDisabled"
+                        >
+                            <span v-if="loading">Deleting...</span>
+                            <span v-else>Confirm Delete</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
         
         <!-- Edit Team Modal -->
         <div v-if="showEditForm" class="popup-overlay">
@@ -262,13 +314,19 @@ export default{
 
             showAddForm: false, // Controls modal visibility
             addFormError: false,
+
             showRemoveForm: false,
+            removeFormError: null,
+            teamIdForDeletion: null,
+            teamNameForDeletion: null,
+            showTeamSelectForDelete: false,
+
             formData: {
                 teamName: '',
                 projectName: '',
                 projectDescription: '',
                 presentationLink: '',
-                gitHubLink: '',
+                githubLink: '',
                 eventId: 1, // Placeholder
             },
             selectedParticipantsIds: [], // Participants currently selected in the form
@@ -324,6 +382,9 @@ export default{
                 const nameB = b.lastName || b.firstName || '';
                 return nameA.localeCompare(nameB);
             });
+        },
+        isDeleteButtonDisabled() {
+            return !this.teamIdForDeletion || this.loading;
         }
     },
     created() {
@@ -388,6 +449,10 @@ export default{
             }catch(err){
                 console.error("Error fetching unassigned users:", err);
             }
+        },
+        updateTeamNameForDeletion() {
+            const selectedTeam = this.teams.find(t => t.id === this.teamIdForDeletion);
+            this.teamNameForDeletion = selectedTeam ? selectedTeam.teamName : null;
         },
         openEditTeamForm(item) {
           this.error = null;
@@ -465,7 +530,7 @@ export default{
                 projectName: '',
                 projectDescription: '',
                 presentationLink: '',
-                gitHubLink: '',
+                githubLink: '',
                 eventId: 1,
             };
             this.selectedParticipantsIds = [];
@@ -519,6 +584,53 @@ export default{
                 this.loading = false;
             }
         },
+        toggleRemoveForm(){
+            this.showEditForm = false;
+            this.showRemoveForm = true;
+            this.removeFormError = null;
+            this.teamIdForDeletion = null;
+            this.teamNameForDeletion = null;
+        },
+        cancelRemove(){
+            this.showRemoveForm = false;
+            this.removeFormError = null;
+            this.teamIdForDeletion = null;
+            this.teamNameForDeletion = null;
+            this.loading = false;
+        },
+        async handleRemoveTeam() {
+            this.loading = true;
+            this.removeFormError = null;
+
+            if (!this.teamIdForDeletion) {
+                this.removeFormError = "Please select a team to delete.";
+                this.loading = false;
+                return;
+            }
+
+            try {
+                // API call to delete the team using the stored editTeamId
+                const response = await axios.delete(`${API_BASE_URL}/teams/${this.teamIdForDeletion}`);
+                
+                this.success = response.data.message || `Team '${this.editFormData.teamName}' successfully deleted.`;
+                
+                // Cleanup: Re-fetch the lists and close all modals
+                await this.fetchTeams();
+                await this.fetchUnassignedUsers();
+                
+                setTimeout(() => {
+                    this.cancelEdit(); // Clears all edit-related state
+                    this.cancelRemove(); // Clears remove-related state
+                    this.success = null;
+                }, 1500);
+
+            } catch (err) {
+                console.error("Error removing team:", err);
+                this.removeFormError = err.response?.data?.message || "Failed to delete team due to an API error.";
+            } finally {
+                this.loading = false;
+            }
+        },
     }
 }
 </script>
@@ -547,7 +659,7 @@ export default{
 }
 
 .table th, .table td{
-    
+
     word-break: break-word;
     white-space: normal;
 }
