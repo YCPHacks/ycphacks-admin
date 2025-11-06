@@ -1,8 +1,23 @@
 <template>
   <div class="login-container">
     <div class="login-box">
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+
+      <div v-if="showAlert">
+        <b-alert
+            v-model="showAlert"
+            :dismissible="true"
+            variant="danger"
+        >
+          <span>{{ message }}</span>
+        </b-alert>
+      </div>
       <h2>YCP Hacks Admin Login</h2>
-      <form @submit.prevent="handleSubmit">
+      <form v-if="!isLoading" @submit.prevent="handleSubmit">
         <div class="input-group">
           <label for="email">Email</label>
           <input type="email" id="email" v-model="email" placeholder="you@example.com" required/>
@@ -19,6 +34,7 @@
 
 <script>
 import {mapActions} from "vuex";
+import store from "@/store/store.js";
 
 export default {
   name: "Login",
@@ -27,23 +43,35 @@ export default {
       email: "",
       password: "",
       showPassword: false,
+      isLoading: false,
+      message: "",
+      showAlert: false
     };
   },
   methods: {
     ...mapActions(['loginAdminUser']),
-    handleSubmit() {
-      const formData = {
-        email: this.email,
-        password: this.password,
-      };
-      console.log(formData)
-      this.loginAdminUser(formData);
+    async handleSubmit() {
+      this.isLoading = true;
+      this.showAlert = false;
+      const formData = { email: this.email, password: this.password };
+
+      try {
+        const result = await store.dispatch('loginAdminUser', formData);
+
+        if (result.success) {
+          this.$router.push('/dashboard');
+        } else {
+          this.message = result.message;
+          this.showAlert = true;
+        }
+      } finally {
+        this.isLoading = false;
+      }
     },
   },
   created() {
     // this runs to see if any token is stored in the local storage
     this.$store.dispatch('validateWithToken');
-
   }
 };
 </script>
