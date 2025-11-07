@@ -184,6 +184,7 @@
 
 <script>
 import axios from 'axios';
+import store from "../store/store.js";
 
 export default {
   name: 'EventEdit',
@@ -217,7 +218,7 @@ export default {
           startDate: new Date(this.event.startDate).toISOString(),
           endDate: new Date(this.event.endDate).toISOString()
         }
-        await axios.put(`http://localhost:3000/event/update`, updatedEvent);
+        await axios.put(`${store.state.apiBaseUrl}/event/update`, updatedEvent);
         this.$router.push({ name: 'Events' });
       } catch (e) {
         console.error('Error updating event:', e);
@@ -225,7 +226,7 @@ export default {
     },
     async fetchEvent() {
       try {
-        const response = await axios.get(`http://localhost:3000/event/${this.id}`);
+        const response = await axios.get(`${store.state.apiBaseUrl}/event/${this.id}`);
         const event = response.data.event;
         this.event = {
           eventName: event.eventName,
@@ -238,7 +239,7 @@ export default {
     },
     async fetchActivities() {
       try {
-        const response = await axios.get(`http://localhost:3000/event/activity/${this.id}`);
+        const response = await axios.get(`${store.state.apiBaseUrl}/event/activity/${this.id}`);
         this.activities = response.data.activities;
       } catch (error) {
         console.error('Error fetching activities:', error);
@@ -246,7 +247,7 @@ export default {
     },
     async fetchHackCategories() {
       try {
-        const response = await axios.get(`http://localhost:3000/event/category/${this.id}`);
+        const response = await axios.get(`${store.state.apiBaseUrl}/event/category/${this.id}`);
         this.hackCategories = response.data.categories;
       } catch (error) {
         console.error('Error fetching hack categories:', error);
@@ -265,7 +266,7 @@ export default {
     },
     async saveActivity() {
       try {
-        await axios.put(`http://localhost:3000/event/activity`, this.currentActivity);
+        await axios.put(`${store.state.apiBaseUrl}/event/activity`, this.currentActivity);
         await this.fetchActivities();
         this.closeEditModal();
       } catch (error) {
@@ -281,7 +282,7 @@ export default {
     },
     async saveCategory() {
       try {
-        await axios.put(`http://localhost:3000/event/category`, this.currentCategory);
+        await axios.put(`${store.state.apiBaseUrl}/event/category`, this.currentCategory);
         this.closeEditCategoryModal();
         await this.fetchHackCategories();
       } catch (error) {
@@ -297,7 +298,7 @@ export default {
     },
     async createActivity() {
       try {
-        await axios.post(`http://localhost:3000/event/activity`, this.newActivity);
+        await axios.post(`${store.state.apiBaseUrl}/event/activity`, this.newActivity);
         await this.fetchActivities()
         this.closeNewActivityModal();
       } catch (error) {
@@ -313,7 +314,7 @@ export default {
     },
     async createCategory() {
       try {
-        await axios.post(`http://localhost:3000/event/category`, this.newCategory);
+        await axios.post(`${store.state.apiBaseUrl}/event/category`, this.newCategory);
         await this.fetchHackCategories();
         this.closeNewCategoryModal();
       } catch (error) {
