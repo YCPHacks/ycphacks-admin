@@ -61,6 +61,7 @@
         <p><strong>Name:</strong> {{ eventForm.eventName }}</p>
         <p><strong>Start Date:</strong> {{ eventForm.startDate }}</p>
         <p><strong>End Date:</strong> {{ eventForm.endDate }}</p>
+        <p><strong>Can Change:</strong> {{ eventForm.canChange ? 'Yes' : 'No' }}</p>
         <p><strong>Active:</strong> {{ eventForm.isActive ? 'Yes' : 'No' }}</p>
         <div class="modal-actions">
           <button class="btn btn-secondary" @click="showViewEventModal = false; resetEventForm()">
