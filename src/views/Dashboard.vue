@@ -93,53 +93,47 @@
       </div>
     </div>
 
-    <!-- Upcoming Events Table -->
-    <div class="upcoming-events">
+    <!-- Upcoming Activities Table -->
+    <div class="upcoming-activities">
       <h3>Upcoming Activities</h3>
-      <table>
+
+      <table v-if="sortedActivities.length > 0">
         <thead>
-          <tr>
-            <th>Title</th>
-            <th>Time</th>
-          </tr>
+        <tr>
+          <th>Title</th>
+          <th>Time</th>
+        </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Check In</td>
-            <td>October 18, 2024 6:00PM</td>
-          </tr>
-          <tr>
-            <td>Team Forming</td>
-            <td>October 18, 2024 6:30PM</td>
-          </tr>
-          <tr>
-            <td>Dinner</td>
-            <td>October 18, 2024 7:30PM</td>
-          </tr>
-          <!-- Additional events shown when 'View All' is clicked -->
-          <tr v-if="showAllEvents">
-            <td>Keynote Speech</td>
-            <td>October 18, 2024 8:00PM</td>
-          </tr>
-          <tr v-if="showAllEvents">
-            <td>Workshop 1</td>
-            <td>October 19, 2024 9:00AM</td>
-          </tr>
-          <tr v-if="showAllEvents">
-            <td>Workshop 2</td>
-            <td>October 19, 2024 11:00AM</td>
-          </tr>
+        <tr
+            v-for="(activity, index) in visibleActivities"
+            :key="activity.id"
+        >
+          <td>{{ activity.activityName }}</td>
+          <td>{{ activity.activityDate }}</td>
+        </tr>
         </tbody>
       </table>
-      <a href="#" @click.prevent="toggleEvents" class="view-all">
-        {{ showAllEvents ? "View Less" : "View All" }}
+
+      <span v-else>There are no activities for the current active event</span>
+
+      <a
+          v-if="sortedActivities.length > 3"
+          href="#"
+          @click.prevent="toggleActivities"
+          class="view-all"
+      >
+        {{ showAllActivities ? "View Less" : "View All" }}
       </a>
     </div>
+
   </div>
 </template>
 
 <script>
 import axios from "axios";
+import store from "@/store/store.js";
+import {mapGetters} from "vuex";
 
 const SIZE_ORDER = ['S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
 
@@ -147,11 +141,13 @@ export default {
   name: "Dashboard",
   data() {
     return {
-      showAllEvents: false,
-      users: []
+      showAllActivities: false,
+      users: [],
+      isLoading: false
     };
   },
   computed: {
+    ...mapGetters(['getActivities']),
     checkedInCount(){
       return this.users.filter(user => user.checkIn && user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar').length;
     },
@@ -171,14 +167,30 @@ export default {
       // Assuming 'oscar' is also counted as staff
       const staff = this.users.filter(u => u.role.toLowerCase() === "staff" || u.role.toLowerCase() === "oscar");
       return this.calculateTally(staff);
+    },
+    sortedActivities() {
+      if (!this.getActivities?.length) return [];
+
+      const now = new Date();
+
+      // Sort activities by earliest and only keep future activities
+      return [...this.getActivities]
+          .filter(activity => new Date(activity.activityDate) > now)
+          .sort((a, b) => new Date(a.activityDate) - new Date(b.activityDate));
+    },
+    visibleActivities() {
+      return this.showAllActivities
+          ? this.sortedActivities.slice(0, 6) // show first 6
+          : this.sortedActivities.slice(0, 3); // show first 3
     }
   },
   created() {
     this.fetchUsers();
+    this.fetchActivities();
   },
   methods: {
-    toggleEvents() {
-      this.showAllEvents = !this.showAllEvents;
+    toggleActivities() {
+      this.showAllActivities = !this.showAllActivities;
     },
     async fetchUsers(){
       try {
@@ -186,6 +198,27 @@ export default {
         this.users = response.data.data;
       } catch (error) {
         console.error("Error fetching users:", error);
+      }
+    },
+    async fetchActivities() {
+      try {
+        this.isLoading = true;
+
+        // Fetch the active event first
+        await store.dispatch('getActiveEvent');
+        const eventId = store.state.event?.id;
+
+        // Only fetch activities if an event exists
+        if (eventId) {
+          await store.dispatch('getAllActivities', eventId);
+        } else {
+          console.warn('No active event found');
+        }
+
+      } catch (error) {
+        console.error('Failed to fetch activities:', error);
+      } finally {
+        this.isLoading = false;
       }
     },
     calculateTally(userList) {
@@ -299,25 +332,25 @@ export default {
   color: #28a745;
 }
 
-.upcoming-events {
+.upcoming-activities {
   background-color: #ffffff;
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.upcoming-events h3 {
+.upcoming-activities h3 {
   margin-top: 0;
 }
 
-.upcoming-events table {
+.upcoming-activities table {
   width: 100%;
   margin: 10px 0;
   border-collapse: collapse;
 }
 
-.upcoming-events th,
-.upcoming-events td {
+.upcoming-activities th,
+.upcoming-activities td {
   padding: 10px;
   text-align: left;
   border-bottom: 1px solid #ddd;

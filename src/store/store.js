@@ -37,7 +37,7 @@ export default createStore({
             state.events = [];
         },
         setEvent(state, event) {
-            state.events = event;
+            state.event = event;
         },
         clearEvent(state) {
             state.event = null;
@@ -289,7 +289,7 @@ export default createStore({
                 const response = await axios.get(`http://localhost:3000/event/active`);
 
                 // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
-                const event = response.data
+                const event = response.data.event
                 event.startDate = formatDateToEST(event.startDate);
                 event.endDate = formatDateToEST(event.endDate)
 
