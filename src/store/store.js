@@ -10,7 +10,8 @@ export default createStore({
         sponsors: [],
         activities: [],
         events: [],
-        event: {}
+        event: {},
+        auditLogs: []
     },
     mutations: {
         setUser(state, user) {
@@ -41,6 +42,12 @@ export default createStore({
         },
         clearEvent(state) {
             state.event = null;
+        },
+        setAuditLogs(state, auditLogs) {
+            state.auditLogs = auditLogs;
+        },
+        clearAuditLogs(state) {
+            state.auditLogs = null;
         }
     },
     actions: {
@@ -298,6 +305,29 @@ export default createStore({
             } catch (error) {
                 return {success: false, message: error.response?.data?.message || "Error fetching active event"};
             }
+        },
+        async getAuditLogs({ commit }, filters = {}) {
+            try {
+                const response = await fetch('http://localhost:3000/audit-logs/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filters),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch audit logs');
+                }
+
+                const data = await response.json();
+                commit("setAuditLogs", data.logs);
+
+                return { success: true, message: data.message };
+            } catch (error) {
+                return {
+                    success: false,
+                    message: error.message || "Error fetching audit logs",
+                };
+            }
         }
     },
     getters: {
@@ -306,6 +336,7 @@ export default createStore({
         allSponsors: (state) => state.sponsors,
         getActivities: (state) => state.activities,
         getEvents: (state) => state.events,
-        getEvent: (state) => state.event
+        getEvent: (state) => state.event,
+        getAuditLogs: (state) => state.auditLogs
     },
 });
