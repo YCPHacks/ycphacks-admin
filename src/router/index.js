@@ -10,6 +10,7 @@ import EventEdit from "@/views/EventEdit.vue";
 import Sponsors from "@/views/Sponsors.vue";
 import Activities from "@/views/Activities.vue";
 import TeamRegistration from '@/views/TeamRegistration.vue';
+import AuditLogs from "@/views/AuditLogs.vue";
 
 const routes = [
     { path: '/', redirect: '/dashboard' },
@@ -26,7 +27,8 @@ const routes = [
         component: EventEdit,
         props: true
     },
-    {path:"/sponsors", component: Sponsors}
+    {path:"/sponsors", component: Sponsors},
+    { path:"/audit-logs", component: AuditLogs }
 ];
 
 const router = createRouter({
