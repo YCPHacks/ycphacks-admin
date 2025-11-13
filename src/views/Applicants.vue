@@ -596,7 +596,7 @@ export default {
           checkIn: newCheckInStatus
         });
         
-        user.checkIn = newCheckInStatus;
+        this.$set(user, 'checkin', newCheckInStatus);
       }catch (err){
         console.error(`Error toggling check-in for user ${userId}:`, err);
       }
@@ -750,6 +750,9 @@ export default {
         if(userToUpdate){
           Object.assign(userToUpdate, this.editUserData);
         }
+        
+        await this.fetchUsers()
+
         this.showEditUserForm = false;
         this.editUserIndex = null;
       } catch (err) {
