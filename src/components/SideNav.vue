@@ -5,6 +5,7 @@
     <router-link to="/events">Events</router-link>
     <router-link to="/activities">Activities</router-link>
     <router-link to="/applicants">Users</router-link>
+    <router-link to="/teams">Team Registration</router-link>
     <router-link to="/hardware">Hardware</router-link>
     <router-link to="/sponsors">Sponsors</router-link>
     <div class="spacer"></div>

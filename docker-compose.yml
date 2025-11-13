@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  frontend:
+    build: .
+    container_name: ycphacks-admin
+    networks:
+      - webnet
+    env_file:
+      - .env
+    ports:
+      - "8081:8081"
+networks:
+  webnet:
+    external: true
