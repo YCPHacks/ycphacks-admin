@@ -290,6 +290,7 @@
 
 <script>
 import axios from "axios";
+import store from "../store/store.js";
 
 const DIET_RESTRICTIONS = [
   'vegan',
@@ -577,7 +578,7 @@ export default {
     },
     async fetchUsers() {
       try {
-        const response = await axios.get("http://localhost:3000/user/all");
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all`);
         this.users = response.data.data;
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -592,7 +593,7 @@ export default {
       const newCheckInStatus = !user.checkIn;
 
       try{
-        await axios.put(`http://localhost:3000/user/${userId}/checkin`, {
+        await axios.put(`${store.state.apiBaseUrl}/user/${userId}/checkin`, {
           checkIn: newCheckInStatus
         });
         
@@ -744,7 +745,7 @@ export default {
           role: this.editUserData.role,
         };
 
-        await axios.put(`http://localhost:3000/user/${userId}`, payload);
+        await axios.put(`${store.state.apiBaseUrl}/user/${userId}`, payload);
 
         const userToUpdate = this.users[this.editUserIndex];
         if(userToUpdate){
@@ -927,7 +928,7 @@ table tbody tr td.table-checkbox-center .form-check-input{
 
 /* Ensure the search bar is still positioned correctly below */
 .mb-4 {
-    margin-bottom: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
 }
 
 .revert-messgae{
