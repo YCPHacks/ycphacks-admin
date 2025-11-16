@@ -759,6 +759,9 @@ export default {
 
       const userId = this.editUserData.id;
 
+      const originalIsBanned = this.editUserOriginalData.isBanned;
+      const newIsBanned = this.editUserData.isBanned;
+
       try{
         const payload ={
           firstName: this.editUserData.firstName,
@@ -774,6 +777,11 @@ export default {
         };
 
         await axios.put(`${store.state.apiBaseUrl}/user/${userId}`, payload);
+
+        if (originalIsBanned && !newIsBanned) {
+          console.log(`Ban lifted for user ${userId}. Unassigning from team...`);
+          await this.unassignParticipant(userId);
+        }
 
         const userToUpdate = this.users[this.editUserIndex];
         if(userToUpdate){
@@ -796,6 +804,17 @@ export default {
       this.editUserError = null;
       this.editUserData = {};
     },
+    async unassignParticipant(userId, eventId=1){
+      try{
+        await axios.put(`${store.state.apiBaseUrl}/event-participant/unassign`, {
+          userId: userId,
+          eventId: eventId
+        });
+        console.log(`User ${userId} successfully unassigned from team.`);
+      } catch (error) {
+        console.error(`Error unassigning user ${userId} from team:`, error.response?.data?.message || error.message);
+      }
+    }
   },
 };
 </script>
