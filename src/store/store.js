@@ -306,22 +306,23 @@ export default createStore({
                 return {success: false, message: error.response?.data?.message || "Error fetching active event"};
             }
         },
-        async getAuditLogs({ commit }, filters = {}) {
+        async getAuditLogs({ commit }, requestPayload = {}) {
             try {
                 const response = await fetch('http://localhost:3000/audit-logs/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(filters),
+                    body: JSON.stringify(requestPayload),
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch audit logs');
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || "Failed to fetch audit logs");
                 }
 
                 const data = await response.json();
-                commit("setAuditLogs", data.logs);
+                commit("setAuditLogs", data.logs || []);
 
-                return { success: true, message: data.message };
+                return { success: true, message: data.message, pagination: data.pagination };
             } catch (error) {
                 return {
                     success: false,

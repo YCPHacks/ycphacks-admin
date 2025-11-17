@@ -39,15 +39,15 @@
           </thead>
 
           <tbody>
-          <tr v-if="getAuditLogs.length === 0">
+          <tr v-if="sortedAuditLogs.length === 0">
             <td colspan="6" class="text-center">No audit logs</td>
           </tr>
           <tr v-for="log in sortedAuditLogs" :key="log.id" class="text-center">
             <td>{{ formatDateToEST(log.createdAt) }}</td>
-            <td>{{ log.action }}</td>
+            <td>{{ toTitleCase(log.action) }}</td>
             <td>{{ log.tableName }}</td>
             <td>{{ log.recordId }}</td>
-            <td>{{ log.userId }}</td>
+            <td>{{ log.userId ? log.userId : 'N/A' }}</td>
             <td class="text-center">
               <button @click="openViewDetailsModal(log)" class="btn btn-info btn-sm me-2">View</button>
             </td>
@@ -56,12 +56,34 @@
         </table>
       </div>
     </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <!-- Page size dropdown -->
+      <div>
+        <b-form-select
+            id="limit"
+            v-model="pagination.limit"
+            :options="[5, 10, 25, 50, 100]"
+            class="w-auto"
+            @update:model-value="changeLimit"
+        />
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-3">
+        <b-pagination
+            v-model="pagination.page"
+            :total-rows="pagination.totalCount"
+            :per-page="pagination.limit"
+            @update:model-value="searchAuditLogs"
+        />
+      </div>
+    </div>
 
     <!-- Modal for Applying Search Filters -->
     <div v-if="showSearchAuditLogsModal" class="modal-overlay">
       <div class="modal-content">
         <h3>Search Filters</h3>
-        <form @submit.prevent="searchAuditLogs">
+        <form @submit.prevent="applyFilters">
           <div class="form-group" style="margin-bottom: 10px">
             <label for="startDate">Start Date</label>
             <input type="datetime-local" id="startDate" v-model="filters.start" class="form-control" />
@@ -104,20 +126,14 @@
           </div>
 
           <div class="form-group" style="margin-bottom: 10px">
-            <label for="user">User</label>
+            <label for="user">User ID</label>
             <input type="number" :min="0" id="user" v-model="filters.userId" class="form-control" />
             <p v-if="errors.userId" class="text-danger">{{ errors.userId }}</p>
           </div>
 
-          <div class="form-group" style="margin-bottom: 10px">
-            <label for="limit">Limit</label>
-            <input type="number" :min="1" :max="100" id="limit" v-model="filters.limit" class="form-control" />
-            <p v-if="errors.limit" class="text-danger">{{ errors.limit }}</p>
-          </div>
-
           <div class="form-group" style="margin: 10px 0">
-            <label for="action">Sort</label>
-            <select id="action" v-model="filters.action" class="form-control">
+            <label for="sort">Sort</label>
+            <select id="sort" v-model="filters.sort" class="form-control">
               <option value="ASC">Ascending</option>
               <option value="DESC">Descending</option>
             </select>
@@ -125,12 +141,63 @@
           </div>
 
           <div class="modal-actions">
+            <button type="button" class="btn btn-outline-secondary" style="margin-right: auto" @click="resetSearchForm">Clear</button>
+            <button type="button" class="btn btn-secondary" @click="showSearchAuditLogsModal = false">Cancel</button>
             <button type="submit" class="btn btn-success">Search</button>
-            <button type="button" class="btn btn-secondary" @click="showSearchAuditLogsModal = false; resetActivityForm()">Cancel</button>
           </div>
 
           <p class="error">{{ message }}</p>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal for Viewing Log Details -->
+    <div v-if="showViewDetailsModal" class="modal-overlay">
+      <div class="modal-content w-auto" style="min-width: 50%">
+
+        <!-- Title section -->
+        <h5 class="mb-3">
+          {{ toTitleCase(selectedLog.action) }} — {{ selectedLog.tableName }}
+        </h5>
+
+        <!-- Comparison grid -->
+        <div class="row">
+          <!-- Old Value Column -->
+          <div class="col-6 border-end">
+            <h6>Old Value</h6>
+            <div v-if="selectedLog.oldValue">
+              <div
+                  v-for="key in filteredKeys(selectedLog.oldValue)"
+                  :key="'old-' + key"
+                  :class="['mb-1', isFieldUpdated(key) ? 'bg-warning-subtle' : '']"
+              >
+                <strong>{{ formatKey(key) }}:</strong> {{ formatValue(selectedLog.oldValue[key]) }}
+              </div>
+            </div>
+            <div v-else class="text-muted">No previous data</div>
+          </div>
+
+          <!-- New Value Column -->
+          <div class="col-6">
+            <h6>New Value</h6>
+            <div v-if="selectedLog.newValue">
+              <div
+                  v-for="key in filteredKeys(selectedLog.newValue)"
+                  :key="'new-' + key"
+                  :class="['mb-1', isFieldUpdated(key) ? 'bg-warning-subtle' : '']"
+              >
+                <strong>{{ formatKey(key) }}:</strong> {{ formatValue(selectedLog.newValue[key]) }}
+              </div>
+            </div>
+            <div v-else class="text-muted">No new data</div>
+          </div>
+        </div>
+
+        <div class="modal-actions mt-3 text-end">
+          <button class="btn btn-secondary" @click="showViewDetailsModal = false">
+            Close
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -142,9 +209,11 @@ import router from "@/router/index.js";
 import store from "@/store/store.js";
 import { mapGetters } from "vuex";
 import {formatDateToEST} from "@/utils/formatDate.js";
+import {BPagination} from "bootstrap-vue-3";
 
 export default {
   name: "AuditLogs",
+  components: {BPagination},
   data() {
     return {
       showSearchAuditLogsModal: false,
@@ -158,9 +227,15 @@ export default {
         action: '',
         start: '',
         end: '',
-        sort: '',
-        limit: 0
+        sort: ''
       },
+      pagination: {
+        page: 1,
+        limit: 10,
+        totalCount: 0,
+        totalPages: 0
+      },
+      selectedLog: {},
       isLoading: false,
       errors: {},
       message: ''
@@ -194,18 +269,10 @@ export default {
     }
   },
   created() {
-    this.fetchAuditLogs();
+    this.searchAuditLogs();
   },
   methods: {
     formatDateToEST,
-    async fetchAuditLogs() {
-      this.isLoading = true
-
-      if (!this.filters.limit) this.filters.limit = 20;
-      await store.dispatch('getAuditLogs', this.filters);
-
-      this.isLoading = false;
-    },
     sortBy(key) {
       if (this.sortKey === key) {
         this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
@@ -215,24 +282,42 @@ export default {
       }
     },
     async searchAuditLogs() {
+      console.log("HI");
       this.isLoading = true;
+      this.message = '';
+      this.errors = {};
 
-      const filtersToSend = {
+      const requestPayload = {
         ...this.filters,
         start: this.filters.start ? new Date(this.filters.start).toISOString() : '',
         end: this.filters.end ? new Date(this.filters.end).toISOString() : '',
+        page: this.pagination.page,
+        limit: this.pagination.limit,
       };
-      const result = await store.dispatch('getAuditLogs', filtersToSend);
+      const result = await store.dispatch('getAuditLogs', requestPayload);
 
       if (result.success) {
         this.showSearchAuditLogsModal = false;
+        this.pagination = result.pagination;
       } else {
         this.message = result.message;
-        this.errors = result.errors;
+        this.errors = result.errors || {};
       }
 
-      if (!this.errors) this.errors = {};
       this.isLoading = false;
+    },
+    applyFilters() {
+      this.pagination.page = 1;
+      this.showSearchAuditLogsModal = false;
+      this.searchAuditLogs();
+    },
+    changeLimit() {
+      this.pagination.page = 1;
+      this.searchAuditLogs();
+    },
+    openViewDetailsModal(log) {
+      this.selectedLog = log;
+      this.showViewDetailsModal = true;
     },
     formatForDatetimeLocal(dateString) {
       const date = new Date(dateString);
@@ -241,8 +326,35 @@ export default {
           .toISOString()
           .slice(0, 16); // keeps "YYYY-MM-DDTHH:mm"
     },
-    openViewDetailsModal(log) {
-      this.showViewDetailsModal = true;
+    toTitleCase(str) {
+      if (!str) return '';
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    },
+    formatKey(key) {
+      return key
+          .replace(/([A-Z])/g, ' $1')     // camelCase → camel Case
+          .replace(/_/g, ' ')             // snake_case → snake case
+          .trim()
+          .replace(/^\w/, c => c.toUpperCase()); // capitalize first letter
+    },
+    formatValue(value) {
+      if (value == null) return '—';
+
+      // If it's a date string
+      if (typeof value === 'string' && !isNaN(Date.parse(value))) {
+        return this.formatDateToEST(value);
+      }
+
+      return value;
+    },
+    filteredKeys(obj) {
+      if (!obj) return [];
+      return Object.keys(obj).filter(k => k !== 'createdAt' && k !== 'updatedAt');
+    },
+    isFieldUpdated(key) {
+      const oldVal = this.selectedLog.oldValue?.[key];
+      const newVal = this.selectedLog.newValue?.[key];
+      return oldVal !== undefined && newVal !== undefined && oldVal !== newVal;
     },
     resetSearchForm() {
       this.filters = {
@@ -252,7 +364,8 @@ export default {
         start: '',
         end: '',
         sort: '',
-        limit: 0
+        limit: 20,
+        page: 1
       };
     }
   }

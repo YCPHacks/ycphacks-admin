@@ -8,19 +8,20 @@
     <router-link to="/teams">Team Registration</router-link>
     <router-link to="/hardware">Hardware</router-link>
     <router-link to="/sponsors">Sponsors</router-link>
-    <router-link to="/audit-logs">Audit Logs</router-link>
+    <router-link to="/audit-logs" v-if="UserRole() === 'oscar'">Audit Logs</router-link>
     <div class="spacer"></div>
     <button @click="handleLogout" class="logout">Logout</button>
   </div>
 </template>
 
 <script>
-import { mapActions } from 'vuex';
+import {mapActions, mapGetters} from 'vuex';
 
 export default {
   name: "SideNav",
   methods: {
     ...mapActions(['logout']),
+    ...mapGetters(['UserRole']),
     handleLogout() {
       this.logout().then(() => {
         this.$router.push('/login');
