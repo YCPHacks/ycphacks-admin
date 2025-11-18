@@ -136,7 +136,7 @@
           </div>
           <div class="mb-2">
             <label class="form-label">$ Amount</label>
-            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
+            <input v-model.number="addAmount" type="number" class="form-control" required min="0" />
           </div>
           <div class="mb-2">
               <label class="form-label">Image PNG</label>
