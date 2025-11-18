@@ -330,7 +330,7 @@ export default {
           // NOTE: This assumes your /hardware/add endpoint returns the ID of the new hardware item.
 
           // Call the controller to save the URL to the HardwareImage table
-          await axios.post(`${store.state.apiBaseUrl}/hardware-images/add`, {
+          await axios.post(`${store.state.apiBaseUrl}/hardware/image/add`, {
             imageUrl: newImageUrl,
             hardwareId: hardwareId
           });
