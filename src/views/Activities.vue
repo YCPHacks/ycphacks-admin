@@ -1,6 +1,12 @@
 <template>
   <div class="container mt-5">
-    <h2 class="mb-4 text-center">All Activities for {{ event.eventName || 'No Event Selected' }}</h2>
+    <h2 class="mb-4 text-center">All Activities for
+      <span>
+        <b-dropdown :text="event.eventName || 'No Event Selected'" style="padding-bottom: 5px;">
+          <b-dropdown-item v-for="listedEvent of getEvents" @click="updateSelectedEvent(listedEvent)">{{ listedEvent.eventName }}</b-dropdown-item>
+        </b-dropdown>
+      </span>
+    </h2>
     <!-- Create Activity Button -->
     <button @click="showCreateActivityModal = true" class="btn btn-primary create-activity-btn">Create Activity</button>
 
@@ -145,27 +151,22 @@ import axios from 'axios';
 import router from "@/router/index.js";
 import store from "@/store/store.js";
 import { mapGetters } from "vuex";
+import { BDropdown } from "bootstrap-vue-3";
 
 export default {
   name: "Activities",
+  components: {BDropdown},
   data() {
     return {
       showCreateActivityModal: false,
       showUpdateActivityModal: false,
       showDeleteActivityModal: false,
-      event: { // NOTE THIS IS TEMPORARY AND SHOULD BE REPLACED WITH A CALL TO THE BACKEND TO GET THE CORRECT EVENT
-        id: 1,
-        eventName: 'YCP Hacks 2025',
-        startDate: new Date('2025-11-07T22:00:00.000Z'),
-        endDate: new Date('2025-11-09T21:00:00.000Z'),
-        canChange: true
-      },
       sortKey: 'activityName', // default column
       sortOrder: 'asc',        // 'asc' or 'desc'
       searchQuery: '',
       activityForm: {
         id: null,
-        eventId: 1, // Event ID
+        eventId: this.event?.id,
         activityName: '',
         activityDate: '',
         activityDescription: ''
@@ -177,7 +178,10 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(['getActivities', 'UserRole']),
+    ...mapGetters(['getActivities', 'UserRole', 'getEvent', 'getEvents']),
+    event() {
+      return this.getEvent;
+    },
     sortedActivities() {
       if (!this.getActivities || this.getActivities.length === 0) return [];
 
@@ -203,15 +207,17 @@ export default {
       });
     }
   },
-  created() {
-    this.fetchActivities();
+  async created() {
+    this.isLoading = true
+    await store.dispatch('getAllEvents');
+    await store.dispatch('getActiveEvent');
+    await store.dispatch('getAllActivities', this.event.id);
+    this.isLoading = false;
   },
   methods: {
     async fetchActivities() {
       this.isLoading = true
-
       await store.dispatch('getAllActivities', this.event.id);
-
       this.isLoading = false;
     },
     sortBy(key) {
@@ -222,11 +228,16 @@ export default {
         this.sortOrder = 'asc';
       }
     },
+    updateSelectedEvent(event) {
+      store.commit('setEvent', event);
+      this.fetchActivities();
+    },
     async createActivity() {
       this.isLoading = true;
 
       const activityToSend = {
         ...this.activityForm,
+        eventId: this.event?.id,
         activityDate: new Date(this.activityForm.activityDate).toISOString()
       };
       const result = await store.dispatch('createActivity', activityToSend);
@@ -249,6 +260,7 @@ export default {
 
       const activityToSend = {
         ...this.activityForm,
+        eventId: this.event?.id,
         activityDate: new Date(this.activityForm.activityDate).toISOString()
       };
       const result = await store.dispatch('updateActivity', activityToSend);
