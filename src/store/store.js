@@ -11,7 +11,8 @@ export default createStore({
         activities: [],
         events: [],
         event: {},
-        auditLogs: []
+        auditLogs: [],
+        apiBaseUrl: import.meta.env.VITE_API_BASE_URL
     },
     mutations: {
         setUser(state, user) {
@@ -51,14 +52,15 @@ export default createStore({
         }
     },
     actions: {
-        async loginAdminUser({commit}, formData) {
+        async loginAdminUser({commit, state}, formData) {
+            console.log(`URL: ${state.apiBaseUrl}`)
             try {
                 const loginData = {
                     email: formData.email,
                     password: formData.password
                 }
 
-                const response = await axios.post("http://localhost:3000/user/admin-login", loginData, {
+                const response = await axios.post(`${state.apiBaseUrl}/user/admin-login`, loginData, {
                     headers: {
                         "Content-Type": "application/json",
                     },
@@ -74,7 +76,7 @@ export default createStore({
                 return { success: false, message: error.response?.data?.message || "Login Failed" };
             }
         },
-        async validateWithToken({commit}) {
+        async validateWithToken({commit, state}) {
             try {
                 const token = {
                     token: document.cookie.split('; ').find(row => row.startsWith('token=')).split('=')[1]
@@ -82,7 +84,7 @@ export default createStore({
 
                 if (!token) return { success: false, message: "No token found"};
 
-                const response = await axios.post("http://localhost:3000/user/auth", {token}, {
+                const response = await axios.post(`${state.apiBaseUrl}/user/auth`, {token}, {
                     headers: {
                         "Content-Type": "application/json",
                     },
@@ -102,20 +104,20 @@ export default createStore({
             document.cookie = `token=; path=/;`;
             router.push("/login");
         },
-        async getAllSponsors({commit}){
+        async getAllSponsors({commit, state}){
             try{
-                const response = await axios.get("http://localhost:3000/sponsor/all");
+                const response = await axios.get(`${state.apiBaseUrl}/sponsor/all`);
                 commit("setSponsors", response.data);
             }catch(err){
                 console.error("Error fetching sponsors: ", err);
             }
         },
-        async createActivity({ commit }, activity) {
+        async createActivity({ commit, state }, activity) {
             try {
                 if (!activity || Object.keys(activity).length === 0) {
                     return { success: false, message: "Activity is empty" };
                 }
-                const response = await fetch('http://localhost:3000/event/activity/', {
+                const response = await fetch(`${state.apiBaseUrl}/event/activity/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(activity)
@@ -131,12 +133,12 @@ export default createStore({
                 return { success: false, message: error.response?.data?.message || "Network or server error while creating activity" };
             }
         },
-        async updateActivity({ commit }, activity) {
+        async updateActivity({ commit, state }, activity) {
             try {
                 if (!activity || Object.keys(activity).length === 0) {
                     return { success: false, message: "Activity is empty" };
                 }
-                const response = await fetch('http://localhost:3000/event/activity', {
+                const response = await fetch(`${state.apiBaseUrl}/event/activity`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(activity)
@@ -152,13 +154,13 @@ export default createStore({
                 return { success: false, message: error.response?.data?.message || "Network or server error while updating activity" };
             }
         },
-        async deleteActivity({ commit }, id) {
+        async deleteActivity({ commit, state }, id) {
             try {
                 if (!id) {
                     return { success: false, message: "Something went wrong" };
                 }
 
-                const response = await fetch(`http://localhost:3000/event/activity/${id}`, {
+                const response = await fetch(`${state.apiBaseUrl}/event/activity/${id}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -174,10 +176,10 @@ export default createStore({
                 return { success: false, message: error.message || "Network or server error while deleting activity" };
             }
         },
-        async getAllActivities({ commit }, eventId) {
+        async getAllActivities({ commit, state }, eventId) {
             try {
                 if (!eventId) return;
-                const response = await axios.get(`http://localhost:3000/event/activity/${eventId}`);
+                const response = await axios.get(`${state.apiBaseUrl}/event/activity/${eventId}`);
 
                 // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
                 const activities = response.data.activities.map(activity => {
@@ -192,12 +194,12 @@ export default createStore({
                 return {success: false, message: error.response?.data?.message || "Error fetching activity"};
             }
         },
-        async createEvent({ commit }, event) {
+        async createEvent({ commit, state }, event) {
             try {
                 if (!event || Object.keys(event).length === 0) {
                     return { success: false, message: "Event is empty" };
                 }
-                const response = await fetch('http://localhost:3000/event/create', {
+                const response = await fetch(`${state.apiBaseUrl}/event/create`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(event)
@@ -213,12 +215,12 @@ export default createStore({
                 return { success: false, message: error.response?.data?.message || "Network or server error while creating event" };
             }
         },
-        async updateEvent({ commit }, event) {
+        async updateEvent({ commit, state }, event) {
             try {
                 if (!event || Object.keys(event).length === 0) {
                     return { success: false, message: "Event is empty" };
                 }
-                const response = await fetch('http://localhost:3000/event/update', {
+                const response = await fetch(`${state.apiBaseUrl}/event/update`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(event)
@@ -234,13 +236,13 @@ export default createStore({
                 return { success: false, message: error.response?.data?.message || "Network or server error while updating event" };
             }
         },
-        async deleteEvent({ commit }, id) {
+        async deleteEvent({ commit, state }, id) {
             try {
                 if (!id) {
                     return { success: false, message: "Something went wrong" };
                 }
 
-                const response = await fetch(`http://localhost:3000/event/delete/${id}`, {
+                const response = await fetch(`${state.apiBaseUrl}/event/delete/${id}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -256,9 +258,9 @@ export default createStore({
                 return { success: false, message: error.message || "Network or server error while deleting event" };
             }
         },
-        async getAllEvents({ commit }) {
+        async getAllEvents({ commit, state }) {
             try {
-                const response = await axios.get(`http://localhost:3000/event/all`);
+                const response = await axios.get(`${state.apiBaseUrl}/event/all`);
 
                 // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
                 const events = response.data.events.map(event => ({
@@ -273,12 +275,12 @@ export default createStore({
                 return {success: false, message: error.response?.data?.message || "Error fetching events"};
             }
         },
-        async getEventById({ commit }, eventId) {
+        async getEventById({ commit, state }, eventId) {
             try {
                 if (!eventId) {
                     return { success: false, message: "Something went wrong" };
                 }
-                const response = await axios.get(`http://localhost:3000/event/${eventId}`);
+                const response = await axios.get(`${state.apiBaseUrl}/event/${eventId}`);
 
                 // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
                 const event = response.data
@@ -291,9 +293,9 @@ export default createStore({
                 return {success: false, message: error.response?.data?.message || "Error fetching event"};
             }
         },
-        async getActiveEvent({ commit }) {
+        async getActiveEvent({ commit, state }) {
             try {
-                const response = await axios.get(`http://localhost:3000/event/active`);
+                const response = await axios.get(`${state.apiBaseUrl}/event/active`);
 
                 // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
                 const event = response.data

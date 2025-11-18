@@ -184,7 +184,7 @@
 
 <script>
 import axios from "axios";
-
+import store from "../store/store.js";
 export default {
   name: "HardwareTab",
   data() {
@@ -214,7 +214,7 @@ export default {
   methods: {
     async fetchHardwareList() {
       try {
-        const response = await axios.get("http://localhost:3000/hardware/admin");
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/register/hardware/admin`);
         const rawData = response.data.hardware || response.data;
 
         this.hardwareList = rawData.map(item => ({
@@ -255,11 +255,11 @@ export default {
 
         if (this.isEditing) {
           await axios.put(
-              `http://localhost:3000/hardware/update/${this.hardwareForm.id}`,
+              `${store.state.apiBaseUrl}/hardware/update/${this.hardwareForm.id}`,
               payload
           );
         } else {
-          await axios.post("http://localhost:3000/hardware/add", payload);
+          await axios.post(`${store.state.apiBaseUrl}/hardware/add`, payload);
         }
         await this.fetchHardwareList();
         this.closeModal();
@@ -272,7 +272,7 @@ export default {
     async deleteHardware(id) {
       if (!confirm("Are you sure you want to delete this hardware?")) return;
       try {
-        await axios.delete(`http://localhost:3000/hardware/delete/${id}`);
+        await axios.delete(`${store.state.apiBaseUrl}/hardware/delete/${id}`);
         await this.fetchHardwareList();
       } catch (error) {
         console.error("Error deleting hardware:", error);
