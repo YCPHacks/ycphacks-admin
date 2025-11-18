@@ -755,8 +755,12 @@ const handleAddSponsor = async () => {
           id: s.id,
           name: s.name,
           website: revertUrlFromServer(s.website),
+          amount: s.amount ?? 0,
           tier: s.tier || "",
-          image: s.image || ""
+          sponsorTierId: s.tierId || null,
+          image: s.image || "",
+          imageWidth: s.imageWidth ?? null,
+          imageHeight: s.imageHeight ?? null,
         }))
       : [];
 
