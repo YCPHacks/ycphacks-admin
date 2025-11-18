@@ -166,6 +166,25 @@
                   Role change to '{{ editUserData.role }}' is permitted for York College users.
                 </div>
               </div>
+
+              <div class="mb-3" v-if="isOscar">
+                <hr>
+                <div class="form-check form-switch">
+                  <input 
+                    class="form-check-input" 
+                    type="checkbox" 
+                    id="editIsBanned"
+                    v-model="editUserData.isBanned"
+                  >
+                  <label class="form-check-label text-danger fw-bold" for="editIsBanned">
+                    ⚠️ BANNED from Hackathon
+                  </label>
+                  <div v-if="editUserData.isBanned" class="alert alert-danger mt-2">
+                    **ACTION:** Banning this user prevents them from registering for a team or participating.
+                  </div>
+                </div>
+                <hr>
+              </div>
               
               <div class="row">
                 <div class="col-md-4 mb-3">
@@ -223,6 +242,7 @@
         <table class="table table-striped table-hover">
           <thead class="thead-light">
             <tr>
+              <th class="text-center" style="width: 1px;">🚨</th>
               <th class="text-left role-column-header" v-if="activeTab === 'all'">Role</th>
               <th class="text-left" v-if="activeTab === 'participant'">Checked In?</th>
               <th class="text-left">First Name</th>
@@ -243,8 +263,15 @@
             </tr>
             <tr v-for="(user, index) in filteredUsers" :key="user.id"
               @click="openEditUserForm(index)" style="cursor: pointer;">
+
+              <td class="text-center align-middle" style="width: 1px">
+                <span v-if="user.isBanned" class="text-danger fs-4" title="BANNED USER">
+                  ⚠️
+                </span>
+                <span v-else class="text-muted">-</span>
+              </td>
               <!-- Add Check Boxes for Check in -->
-               <td v-if="activeTab === 'all'" class="role-column">
+              <td v-if="activeTab === 'all'" class="role-column">
                 <div class="role-badge-wrapper">
                   <span 
                     class="badge role-badge text-center" 
@@ -259,7 +286,7 @@
                   type="checkbox" 
                   :checked="user.checkIn" 
                   @change="toggleCheckIn(user.id)" 
-                  @class.stop
+                  @click.stop
                   class="form-check-input"
                 >
               </td>
@@ -597,7 +624,7 @@ export default {
           checkIn: newCheckInStatus
         });
         
-        user.checkIn = newCheckInStatus;
+        this.$set(user, 'checkin', newCheckInStatus);
       }catch (err){
         console.error(`Error toggling check-in for user ${userId}:`, err);
       }
@@ -732,6 +759,9 @@ export default {
 
       const userId = this.editUserData.id;
 
+      const originalIsBanned = this.editUserOriginalData.isBanned;
+      const newIsBanned = this.editUserData.isBanned;
+
       try{
         const payload ={
           firstName: this.editUserData.firstName,
@@ -743,14 +773,23 @@ export default {
           tShirtSize: this.editUserData.tShirtSize,
           dietaryRestrictions: this.editUserData.dietaryRestrictions,
           role: this.editUserData.role,
+          isBanned: this.editUserData.isBanned
         };
 
         await axios.put(`${store.state.apiBaseUrl}/user/${userId}`, payload);
+
+        if (originalIsBanned && !newIsBanned) {
+          console.log(`Ban lifted for user ${userId}. Unassigning from team...`);
+          await this.unassignParticipant(userId);
+        }
 
         const userToUpdate = this.users[this.editUserIndex];
         if(userToUpdate){
           Object.assign(userToUpdate, this.editUserData);
         }
+        
+        await this.fetchUsers()
+
         this.showEditUserForm = false;
         this.editUserIndex = null;
       } catch (err) {
@@ -765,6 +804,17 @@ export default {
       this.editUserError = null;
       this.editUserData = {};
     },
+    async unassignParticipant(userId, eventId=1){
+      try{
+        await axios.put(`${store.state.apiBaseUrl}/event-participant/unassign`, {
+          userId: userId,
+          eventId: eventId
+        });
+        console.log(`User ${userId} successfully unassigned from team.`);
+      } catch (error) {
+        console.error(`Error unassigning user ${userId} from team:`, error.response?.data?.message || error.message);
+      }
+    }
   },
 };
 </script>

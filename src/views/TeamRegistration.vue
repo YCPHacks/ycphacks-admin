@@ -377,7 +377,9 @@ export default{
                 }
             });
 
-            return Array.from(uniqueUsersMap.values()).sort((a, b) => {
+            return Array.from(uniqueUsersMap.values())
+                .filter(user => user.isBanned !== true && user.isBanned !== 1)
+                .sort((a, b) => {
                 const nameA = a.lastName || a.firstName || '';
                 const nameB = b.lastName || b.firstName || '';
                 return nameA.localeCompare(nameB);
@@ -414,11 +416,13 @@ export default{
                 return 'Data error';
             }
             
-            if (participantsArray.length === 0) {
+            const displayArray = participantsArray.filter(p => p.isBanned !== true && p.isBanned !== 1);
+
+            if (displayArray.length === 0) {
                 return 'No members assigned';
             }
 
-            return participantsArray.map(p => {
+            return displayArray.map(p => {
                 const firstName = p?.firstName || '';
                 const lastName = p?.lastName || '';
                 const name = p?.name;
@@ -437,13 +441,16 @@ export default{
             try{
                 const res = await axios.get(`${API_BASE_URL}/teams/unassignedParticipants`);
                 
-                this.unassignedUsers = res.data.data.map(participant => {
+                this.unassignedUsers = res.data.data
+                    .filter(participant => participant.isBanned !== true && participant.isBanned !== 1)
+                    .map(participant => {
                     return {
                         id: participant.id,
                         firstName: participant.firstName,
                         lastName: participant.lastName,
                         email: participant.email,
                         checkIn: participant.checkIn === true || participant.checkIn === 1, 
+                        isBanned: participant.isBanned === true || participant.isBanned === 1,
                     };
                 });
             }catch(err){
@@ -453,6 +460,14 @@ export default{
         updateTeamNameForDeletion() {
             const selectedTeam = this.teams.find(t => t.id === this.teamIdForDeletion);
             this.teamNameForDeletion = selectedTeam ? selectedTeam.teamName : null;
+        },
+        handleUserBanned(bannedUserId){
+            this.teams - this.teams.map(team => {
+                team.participants = team.participants.filter(p => p.id !== bannedUserId)
+                return team;
+            });
+
+            this.unassignedUsers = this.unassignedUsers.filter(p => p.id !== bannedUserId)
         },
         openEditTeamForm(item) {
           this.error = null;
