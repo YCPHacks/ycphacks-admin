@@ -10,6 +10,7 @@ import EventEdit from "@/views/EventEdit.vue";
 import Sponsors from "@/views/Sponsors.vue";
 import Activities from "@/views/Activities.vue";
 import TeamRegistration from '@/views/TeamRegistration.vue';
+import AuditLogs from "@/views/AuditLogs.vue";
 
 const routes = [
     { path: '/', redirect: '/dashboard' },
@@ -26,7 +27,8 @@ const routes = [
         component: EventEdit,
         props: true
     },
-    {path:"/sponsors", component: Sponsors}
+    {path:"/sponsors", component: Sponsors},
+    { path:"/audit-logs", component: AuditLogs, meta: { requiresOscar: true } }
 ];
 
 const router = createRouter({
@@ -56,6 +58,13 @@ router.beforeEach(async (to, from, next) => {
     // For all other routes that require auth
     if (!isAuthenticated || !hasPermissions) {
         return next('/login'); // redirect to login
+    }
+
+    // For routes that require oscar-level role
+    if (to.meta.requiresOscar) {
+        if (userRole !== 'oscar') {
+            return next("/");
+        }
     }
 
     next(); // allow route
