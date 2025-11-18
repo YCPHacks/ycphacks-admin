@@ -132,7 +132,7 @@
 
 <script>
 import axios from "axios";
-import store from "@/store/store.js";
+import store from "../store/store.js";
 import {mapGetters} from "vuex";
 
 const SIZE_ORDER = ['S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
@@ -194,7 +194,7 @@ export default {
     },
     async fetchUsers(){
       try {
-        const response = await axios.get("http://localhost:3000/user/all");
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all`);
         this.users = response.data.data;
       } catch (error) {
         console.error("Error fetching users:", error);

@@ -1,6 +1,6 @@
 import axios from "axios";
-
-const API_URL = "http://localhost:3000/sponsors";
+import store from "../store/store.js";
+const API_URL = `${store.state.apiBaseUrl}/sponsors`;
 
 // Get sponsors for a specific event
 export const getSponsors = async (eventId) => {
