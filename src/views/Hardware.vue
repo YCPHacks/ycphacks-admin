@@ -206,7 +206,7 @@ export default {
     async fetchHardwareList() {
       try {
         const response = await axios.get(
-            `${store.state.apiBaseUrl}/user/register/hardware/admin`
+            `${store.state.apiBaseUrl}/hardware/admin`
         );
 
         const raw = response.data.hardware || response.data;
@@ -277,7 +277,7 @@ export default {
 
       try {
         const {data} = await axios.post(
-            `${store.state.apiBaseUrl}/upload`,
+            `${store.state.apiBaseUrl}/api/upload`,
             formData,
             {headers: {'Content-Type': 'multipart/form-data'}}
         );
