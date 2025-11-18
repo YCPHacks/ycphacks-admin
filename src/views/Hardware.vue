@@ -2,40 +2,56 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Hardware List</h2>
 
-    <!-- Add Hardware Button -->
     <button @click="openAddModal" class="btn btn-primary add-hardware-btn">
       Add Hardware
     </button>
 
-    <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden mt-3">
       <div class="table-responsive">
         <table class="table table-striped table-hover">
-          <thead class="thead-light">
+          <thead class="table-dark">
           <tr>
-            <th class="text-left">Hardware Name</th>
-            <th class="text-left">Serial Number</th>
-            <th class="text-left">Functioning</th>
-            <th class="text-left">Description</th>
-            <th class="text-left">Actions</th>
+            <th>Name</th>
+            <th>Image</th>
+            <th>Serial Number</th>
+            <th>Functional</th>
+            <th>Description</th>
+            <th>Actions</th>
           </tr>
           </thead>
+
           <tbody>
           <tr v-if="hardwareList.length === 0">
-            <td colspan="4" class="text-center">No hardware available</td>
+            <td colspan="6" class="text-center">No hardware available</td>
           </tr>
+
           <tr v-for="hardware in hardwareList" :key="hardware.id">
             <td>{{ hardware.name }}</td>
-            <td>{{ hardware.serial }}</td>
-            <td>{{ hardware.functional }}</td>
-            <td>{{ hardware.description || "—" }}</td>
+
             <td>
-              <button
-                  @click="viewHardwareDetails(hardware)"
-                  class="btn btn-info btn-sm me-2"
-              >
-                View
-              </button>
+              <img
+                  v-if="hardware.images && hardware.images.length > 0"
+                  :src="hardware.images[0].imageUrl"
+                  :alt="`${hardware.name} Image`"
+                  class="hardware-img"
+              />
+              <span v-else class="text-muted">No image</span>
+            </td>
+
+            <td>{{ hardware.serial }}</td>
+
+            <td>
+                <span
+                    class="badge"
+                    :class="hardware.functional ? 'bg-success' : 'bg-danger'"
+                >
+                  {{ hardware.functional ? "Functional" : "Not Functional" }}
+                </span>
+            </td>
+
+            <td>{{ hardware.description }}</td>
+
+            <td>
               <button
                   @click="editHardware(hardware)"
                   class="btn btn-warning btn-sm me-2"
@@ -55,45 +71,23 @@
       </div>
     </div>
 
-    <!--
-        <div v-if="hardwareWithWhoHas.length > 0" class="table-container shadow-lg rounded overflow-hidden mt-5">
-          <div class="table-responsive">
-            <h4 class="text-center mt-3">Assigned Hardware</h4>
-            <table class="table table-striped table-hover">
-              <thead class="thead-light">
-              <tr>
-                <th class="text-left">Hardware Name</th>
-                <th class="text-left">Serial Number</th>
-                <th class="text-left">Assigned To</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr v-for="hardware in hardwareWithWhoHas" :key="hardware.id + '-owner'">
-                <td>{{ hardware.name }}</td>
-                <td>{{ hardware.serial }}</td>
-                <td>{{ hardware.whoHasId }}</td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-    -->
-
-    <!-- Modal for Adding/Editing Hardware -->
     <div v-if="showHardwareModal" class="modal-overlay">
       <div class="modal-content">
         <h3>{{ isEditing ? "Edit Hardware" : "Add Hardware" }}</h3>
+
         <form @submit.prevent="saveHardware">
+
           <div class="form-group">
             <label for="hardwareName">Hardware Name</label>
             <input
                 type="text"
                 id="hardwareName"
-                v-model="hardwareForm.name"
+                v-model="hardwareForm.hardwareName"
                 class="form-control"
                 required
             />
           </div>
+
           <div class="form-group mt-2">
             <label for="hardwareSerial">Serial Number</label>
             <input
@@ -104,6 +98,7 @@
                 required
             />
           </div>
+
           <div class="form-group mt-3">
             <label>Functional</label>
             <div class="btn-group d-flex" role="group">
@@ -115,6 +110,7 @@
               >
                 Yes
               </button>
+
               <button
                   type="button"
                   class="btn"
@@ -125,6 +121,7 @@
               </button>
             </div>
           </div>
+
           <div class="form-group mt-2">
             <label for="hardwareDescription">Description</label>
             <textarea
@@ -134,153 +131,232 @@
             ></textarea>
           </div>
 
-          <!-- WhoHasId input -->
-          <!--
-          <div class="form-group mt-2">
-            <label for="hardwareWhoHasID">Who Has ID</label>
-            <input
-                type="number"
-                id="hardwareWhoHasID"
-                v-model.number="hardwareForm.whoHasID"
-                class="form-control"
-                placeholder="Enter user ID or leave blank if unassigned"
-            />
-          </div>
-          -->
+          <div class="form-group mt-3">
+            <label>Upload Image</label>
+            <input type="file" @change="onFileChange" class="form-control" accept="image/*" />
 
-          <div class="modal-actions mt-3">
-            <button type="submit" class="btn btn-success me-2">
-              {{ isEditing ? "Update" : "Save" }}
+            <div v-if="previewImageUrl" class="mt-2 text-center">
+              <img :src="previewImageUrl" class="preview-img" alt="Image Preview" />
+            </div>
+          </div>
+
+          <div class="modal-actions mt-4">
+            <button type="submit" class="btn btn-success me-2" :disabled="isUploading">
+              {{ isUploading ? 'Uploading...' : (isEditing ? "Update" : "Save") }}
             </button>
-            <button
-                type="button"
-                class="btn btn-secondary"
-                @click="closeModal"
-            >
+            <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="isUploading">
               Cancel
             </button>
           </div>
+
         </form>
       </div>
     </div>
 
-    <!-- Modal for Viewing Hardware Details -->
-    <div v-if="selectedHardware" class="modal-overlay">
-      <div class="modal-content">
-        <h3>Hardware Details</h3>
-        <p><strong>Name:</strong> {{ selectedHardware.name }}</p>
-        <p><strong>Serial Number:</strong> {{ selectedHardware.serial }}</p>
-        <p><strong>Functional:</strong> {{ selectedHardware.functional }}</p>
-        <p><strong>Description:</strong> {{ selectedHardware.description }}</p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="selectedHardware = null">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+
 export default {
   name: "HardwareTab",
+
   data() {
     return {
       hardwareList: [],
       showHardwareModal: false,
       isEditing: false,
-      selectedHardware: null,
+      isUploading: false, // New state for better UX
+      selectedFile: null,
+
       hardwareForm: {
         id: null,
-        name: "",
+        hardwareName: "", // Updated field name to match backend/database structure
         serial: "",
         functional: true,
         description: "",
-        // whoHasID: null,
+        // We no longer store imageUrl here, as hardware can have multiple images.
+        // The one used for preview is handled by a computed property.
       },
+      // Keep track of the current primary image URL for editing preview
+      currentPrimaryImageUrl: null,
     };
   },
+
+  // Computed property to determine the correct image source for the modal preview
+  computed: {
+    previewImageUrl() {
+      // 1. Show preview of the newly selected file (FileReader)
+      if (this.selectedFile) {
+        return URL.createObjectURL(this.selectedFile);
+      }
+      // 2. Show the existing primary image URL if editing
+      return this.currentPrimaryImageUrl;
+    }
+  },
+
   created() {
     this.fetchHardwareList();
   },
-  // computed: {
-  //   hardwareWithWhoHas() {
-  //     return this.hardwareList.filter(h => h.whoHasId && h.whoHasId !== "");
-  //   },
-  // },
+
   methods: {
+    // --- Data Fetching ---
     async fetchHardwareList() {
       try {
-        const response = await axios.get(`${store.state.apiBaseUrl}/user/register/hardware/admin`);
-        const rawData = response.data.hardware || response.data;
+        const response = await axios.get(
+            `${store.state.apiBaseUrl}/user/register/hardware/admin`
+        );
 
-        this.hardwareList = rawData.map(item => ({
+        const raw = response.data.hardware || response.data;
+
+        // NOTE: The backend needs to return 'hardwareName', 'serial', 'functional',
+        // 'description', and an 'images' array (from the HardwareRepo update)
+        this.hardwareList = raw.map(item => ({
           id: item.hardwareId || item.id,
           name: item.hardwareName,
           serial: item.serial,
           functional: item.functional ?? true,
           description: item.description || "",
-          // whoHasId: item.whoHasId || "",
+          // Access the images array returned by the repository's 'include'
+          images: item.images || [],
         }));
+
       } catch (error) {
         console.error("Error fetching hardware:", error);
       }
     },
 
+    // --- Modal and Form Handling ---
     openAddModal() {
-      this.isEditing = false;
       this.resetForm();
+      this.isEditing = false;
       this.showHardwareModal = true;
     },
 
     editHardware(hardware) {
       this.isEditing = true;
-      this.hardwareForm = { ...hardware };
+
+      // Map the data structure to the form structure
+      this.hardwareForm = {
+        id: hardware.id,
+        hardwareName: hardware.name, // Use the correct field name for the backend
+        serial: hardware.serial,
+        functional: hardware.functional,
+        description: hardware.description,
+      };
+
+      // Set the existing image URL for preview
+      this.currentPrimaryImageUrl = hardware.images.length > 0
+          ? hardware.images[0].imageUrl
+          : null;
+
+      this.selectedFile = null;
       this.showHardwareModal = true;
     },
 
-    async saveHardware() {
+    // --- File Handling ---
+    onFileChange(e) {
+      // Reset current primary image URL if a new file is selected
+      this.currentPrimaryImageUrl = null;
+      this.selectedFile = e.target.files[0];
+    },
+
+    // --- Image Upload Logic (Step 1) ---
+    async uploadImageIfNeeded() {
+      if (!this.selectedFile) {
+        return null; // No new image to upload
+      }
+
+      this.isUploading = true;
+
+      const formData = new FormData();
+      // 'image' must match your upload controller's .single('image') key
+      formData.append("image", this.selectedFile);
+
       try {
-        const payload = {
-          id: this.hardwareForm.id,
-          name: this.hardwareForm.name,
+        const {data} = await axios.post(
+            `${store.state.apiBaseUrl}/upload`,
+            formData,
+            {headers: {'Content-Type': 'multipart/form-data'}}
+        );
+        return data.imageUrl; // The public DO Space URL
+      } catch (e) {
+        console.error("Image upload failed:", e);
+        throw new Error("Failed to upload image to DigitalOcean Space.");
+      } finally {
+        this.isUploading = false;
+      }
+    },
+
+    // --- Form Submission (Step 2 & DB Save) ---
+    async saveHardware() {
+      if (this.isUploading) return;
+
+      try {
+        // Step 1: Upload image if a new one was selected
+        const newImageUrl = await this.uploadImageIfNeeded();
+
+        // 1. Construct the payload for the Hardware table
+        const hardwarePayload = {
+          // Use the correct field names for the backend: hardwareName, serial, functional, description
+          hardwareName: this.hardwareForm.hardwareName,
           serial: this.hardwareForm.serial,
           functional: this.hardwareForm.functional,
           description: this.hardwareForm.description,
-          // whoHasID: this.hardwareForm.whoHasID ? Number(this.hardwareForm.whoHasID) : null,
         };
 
+        let hardwareResponse;
+
+        // Step 2a: UPDATE
         if (this.isEditing) {
-          await axios.put(
+          hardwareResponse = await axios.put(
               `${store.state.apiBaseUrl}/hardware/update/${this.hardwareForm.id}`,
-              payload
+              hardwarePayload
           );
-        } else {
-          await axios.post(`${store.state.apiBaseUrl}/hardware/add`, payload);
         }
+
+        // Step 2b: CREATE NEW
+        else {
+          hardwareResponse = await axios.post(`${store.state.apiBaseUrl}/hardware/add`, hardwarePayload);
+        }
+
+        // Step 3: Link the new image to the created/updated hardware
+        if (newImageUrl) {
+          // Determine the hardware ID: use the ID from the form (edit) or the new ID from the response (create)
+          const hardwareId = this.isEditing ? this.hardwareForm.id : hardwareResponse.data.id;
+
+          // NOTE: This assumes your /hardware/add endpoint returns the ID of the new hardware item.
+
+          // Call the controller to save the URL to the HardwareImage table
+          await axios.post(`${store.state.apiBaseUrl}/hardware-images/add`, {
+            imageUrl: newImageUrl,
+            hardwareId: hardwareId
+          });
+        }
+
         await this.fetchHardwareList();
         this.closeModal();
 
       } catch (error) {
         console.error("Error saving hardware:", error);
+        alert('Failed to save hardware. Check console for details.');
       }
     },
 
+    // --- Other Methods (Minor fixes) ---
     async deleteHardware(id) {
       if (!confirm("Are you sure you want to delete this hardware?")) return;
+
       try {
+        // You should also delete the associated images from DO Space here for cleanup,
+        // but that requires a separate backend endpoint.
         await axios.delete(`${store.state.apiBaseUrl}/hardware/delete/${id}`);
         await this.fetchHardwareList();
       } catch (error) {
         console.error("Error deleting hardware:", error);
       }
-    },
-
-    viewHardwareDetails(hardware) {
-      this.selectedHardware = hardware;
     },
 
     closeModal() {
@@ -291,32 +367,38 @@ export default {
     resetForm() {
       this.hardwareForm = {
         id: null,
-        name: "",
+        hardwareName: "",
         serial: "",
         functional: true,
         description: "",
-        // whoHasID: null,
       };
+      this.selectedFile = null;
+      this.currentPrimaryImageUrl = null;
     },
   },
 };
 </script>
 
 <style scoped>
+/* Styles remain the same */
 .add-hardware-btn {
   float: right;
   margin-bottom: 10px;
 }
 
-.table-container {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
+.hardware-img {
+  width: 80px;
+  height: auto;
+  border-radius: 6px;
+  object-fit: cover;
 }
 
-.table th {
-  background: #e9ecef;
-  color: #495057;
+.preview-img {
+  width: 140px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
 }
 
 .modal-overlay {
@@ -336,6 +418,8 @@ export default {
   padding: 20px;
   border-radius: 10px;
   width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
