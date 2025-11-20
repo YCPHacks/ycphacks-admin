@@ -341,7 +341,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, updateSponsorTier, removeSponsorTier } from "@/services/sponsorService";
+import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, updateSponsorTier, removeSponsorTier, getActiveEventObject } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
 
 // List of sponsors
@@ -624,8 +624,23 @@ const isDeleteButtonDisabled = computed(() => {
 
 const fetchSponsorsAndTiers = async () => {
   try{
-    currentEventId.value = await getCurrentEventId();
-    const eventId = await getCurrentEventId();
+    let eventId = null;
+
+    if(!eventId){
+      const activeEvent = await getActiveEventObject();
+      if(activeEvent && activeEvent.event && activeEvent.event.id){
+        eventId = activeEvent.event.id;
+      }
+    }
+
+    if(!eventId){
+      console.warn("Could not determine current event ID. Cannot fetch sponsors.");
+      sponsors.value = [];
+      tiers.value = [];
+      return;
+    }
+
+    currentEventId.value = eventId;
     const res = await getSponsors(eventId);
 
     const data = res.data || {};
@@ -1020,11 +1035,6 @@ const cancelEdit = () => {
     editId.value = null;
     editFormError.value = null;
 };
-
-const getCurrentEventId = () => {
-    //return selectedEvent.value.id;
-    return 1;
-}
 </script>
 
 <style scoped>
