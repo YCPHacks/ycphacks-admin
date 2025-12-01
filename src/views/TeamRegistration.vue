@@ -337,7 +337,15 @@ export default{
             VISUAL_SLOTS: 4,
         }
     },
+    async mounted() {
+        await this.$store.dispatch('getActiveEvent'); 
+        this.fetchTeams();
+        this.fetchUnassignedUsers();
+    },
     computed:{
+        activeEventId(){
+            return this.$store.state.activeEvent;
+        },
         isOscar(){
             return this.$store.getters.UserRole === 'oscar';
         },
@@ -389,17 +397,21 @@ export default{
             return !this.teamIdForDeletion || this.loading;
         }
     },
-    created() {
-        this.fetchTeams();
-        this.fetchUnassignedUsers();
-    },
+    // created() {
+    //     this.fetchTeams();
+    //     this.fetchUnassignedUsers();
+    // },
     methods: {
         async fetchTeams() {
-            try{
-                const response = await axios.get(`${API_BASE_URL}/teams/all`);
+            // 1. Determine the Event ID by dispatching the Vuex action
+            const eventId = this.activeEventId; 
+            try {
+                // 2. Use the new endpoint and append eventId as a query parameter                
+                const response = await axios.get(`${API_BASE_URL}/teams/all?eventId=${eventId}`);
+
                 this.teams = response.data.data;
-            }catch(err){
-                console.error("Error fetching teams: ", err);
+            } catch(err) {
+                console.error("Error fetching teams: ", err.response?.data?.message || err.message);
             }
         },
         formatParticipants(participants){
@@ -428,13 +440,13 @@ export default{
                 const name = p?.name;
                 const id = p?.id;
 
-                if (firstName && lastName) {
-                    return `${firstName} ${lastName}`;
-                }
-                if (name) {
-                    return name;
-                }
-                return `ID: ${id || 'Unknown'}`;
+                // if (firstName && lastName) {
+                //     return `${firstName} ${lastName}`;
+                // }
+                // if (name) {
+                //     return name;
+                // }
+                return `${firstName} ${lastName}`;
             }).join(', ');
         },
         async fetchUnassignedUsers(){

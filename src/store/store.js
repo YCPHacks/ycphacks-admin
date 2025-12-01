@@ -296,7 +296,7 @@ export default createStore({
                 event.endDate = formatDateToEST(event.endDate)
 
                 commit("setEvent", event);
-                return {success: true, message: response.data.message};
+                return {success: true, message: response.data.message, event: event};
             } catch (error) {
                 return {success: false, message: error.response?.data?.message || "Error fetching active event"};
             }
