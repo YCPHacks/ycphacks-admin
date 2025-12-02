@@ -146,8 +146,14 @@ export default {
       isLoading: false
     };
   },
+  async mounted() {
+    await this.$store.dispatch('getActiveEvent'); 
+    this.fetchUsers();
+  },
   computed: {
-    ...mapGetters(['getActivities']),
+    activeEventId(){
+      return this.$store.state.activeEvent;
+    },
     checkedInCount(){
       return this.users.filter(user => user.checkIn && user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar').length;
     },
@@ -184,17 +190,15 @@ export default {
           : this.sortedActivities.slice(0, 3); // show first 3
     }
   },
-  created() {
-    this.fetchUsers();
-    this.fetchActivities();
-  },
   methods: {
     toggleActivities() {
       this.showAllActivities = !this.showAllActivities;
     },
     async fetchUsers(){
+      const eventId = this.activeEventId;
+      
       try {
-        const response = await axios.get(`${store.state.apiBaseUrl}/user/all`);
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all?eventId=${eventId}`);
         this.users = response.data.data;
       } catch (error) {
         console.error("Error fetching users:", error);

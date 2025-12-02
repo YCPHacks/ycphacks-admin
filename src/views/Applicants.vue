@@ -390,9 +390,9 @@ export default {
       }
     }
   },
-  created() {
-    this.fetchUsers();
-  },
+  // created() {
+  //   this.fetchUsers();
+  // },
   data() {
     return {
       users: [],
@@ -430,7 +430,14 @@ export default {
       exportFields: []
     };
   },
+  async mounted() {
+    await this.$store.dispatch('getActiveEvent'); 
+    this.fetchUsers();
+  },
   computed: {
+    activeEventId(){
+      return this.$store.state.activeEvent;
+    },
     isOscar(){
       return this.$store.getters.UserRole === 'oscar';
     },
@@ -604,8 +611,10 @@ export default {
       }
     },
     async fetchUsers() {
+      const eventId = this.activeEventId;
+
       try {
-        const response = await axios.get(`${store.state.apiBaseUrl}/user/all`);
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all?eventId=${eventId}`);
         this.users = response.data.data;
       } catch (error) {
         console.error("Error fetching users:", error);
