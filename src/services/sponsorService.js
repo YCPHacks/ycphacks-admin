@@ -1,6 +1,7 @@
 import axios from "axios";
 import store from "../store/store.js";
 const API_URL = `${store.state.apiBaseUrl}/sponsors`;
+const EVENT_API_URL = `${store.state.apiBaseUrl}/event`;
 
 // Get sponsors for a specific event
 export const getSponsors = async (eventId) => {
@@ -45,3 +46,8 @@ export const updateSponsorTier = async (id, updates) => {
 export const removeSponsorTier = async (tierId) => {
   return axios.delete(`${API_URL}/tiers/${tierId}`);
 }
+
+export const getActiveEventObject = async () => {
+  const response = await axios.get(`${EVENT_API_URL}/active`);
+  return response.data;
+};
