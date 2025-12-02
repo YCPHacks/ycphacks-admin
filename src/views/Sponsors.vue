@@ -115,38 +115,49 @@
         <h5>Add Sponsor</h5>
         <form @submit.prevent="handleAddSponsor">
           <div v-if="addFormError" class="alert alert-danger p-2 mb-3" role="alert">
-              <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
           </div>
           <div class="mb-2">
             <label class="form-label">Name</label>
             <input v-model="addName" type="text" class="form-control" required />
           </div>
           <div class="mb-2">
-              <label class="form-label">Tier</label>
-              <select v-model="addTier" class="form-control" required>
-                <option value="" disabled>Select a tier</option>
-                <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
-                  {{ tier.tier }}
-                </option>
-              </select>
+            <label class="form-label">Tier</label>
+            <select v-model="addTier" class="form-control" required>
+              <option value="" disabled>Select a tier</option>
+              <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
+                {{ tier.tier }}
+              </option>
+            </select>
           </div>
           <div class="mb-2">
-              <label class="form-label">Website URL</label>
-              <input v-model="addWebsite" type="text" class="form-control" />
+            <label class="form-label">Website URL</label>
+            <input v-model="addWebsite" type="text" class="form-control" />
           </div>
           <div class="mb-2">
             <label class="form-label">$ Amount</label>
-            <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
+            <input v-model.number="addAmount" type="number" class="form-control" required min="0" />
           </div>
+
           <div class="mb-2">
-              <label class="form-label">Image PNG</label>
-              <input v-model="addPNG" type="text" class="form-control" />
+            <label class="form-label">Upload Image</label>
+            <input
+                type="file"
+                class="form-control"
+                @change="handleImageSelection"
+                accept="image/*"
+            />
+
+            <div v-if="previewImageUrl" class="mt-2 text-center">
+              <img :src="previewImageUrl" class="preview-img" alt="Image Preview" />
+            </div>
           </div>
+
           <div class="d-flex justify-content-end gap-2">
-              <button type="button" class="btn btn-secondary" @click="cancelAdd">
-                Cancel
-              </button>
-              <button type="submit" class="btn btn-success">Submit</button>
+            <button type="button" class="btn btn-secondary" @click="cancelAdd">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-success">Submit</button>
           </div>
         </form>
       </div>
@@ -207,6 +218,21 @@
             <label class="form-label">$ Amount</label>
             <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
           </div>
+
+          <div class="mb-2">
+            <label class="form-label">Upload Image</label>
+            <input
+                type="file"
+                class="form-control"
+                @change="handleImageSelection"
+                accept="image/*"
+            />
+
+            <div v-if="previewImageUrl" class="mt-2 text-center">
+              <img :src="previewImageUrl" class="preview-img" alt="Image Preview" />
+            </div>
+          </div>
+
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEdit">
               Cancel
@@ -343,6 +369,7 @@
 import { ref, onMounted, computed } from "vue";
 import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, updateSponsorTier, removeSponsorTier, getActiveEventObject } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
+import axios from "axios";
 
 // List of sponsors
 const sponsors = ref([]);
@@ -353,7 +380,8 @@ const currentEventId = ref(null);
 const addName = ref("");
 const addTier = ref("");
 const addWebsite = ref("");
-const addPNG = ref("");
+// const addPNG = ref("");
+const addFile = ref(null);
 const addAmount = ref(0);
 const removeName = ref("");
 const showAddForm = ref(false);
@@ -390,8 +418,9 @@ const editId = ref(null);
 const editName = ref("");
 const editTier = ref("");
 const editWebsite = ref("");
-const editPNG = ref("");
+const editFile = ref(null);
 const editAmount = ref(0);
+const selectedImage = ref(false);
 
 // Validate Characters
 const validateName = (name) => {
@@ -408,7 +437,15 @@ const validateName = (name) => {
   }
   return null;
 };
+const handleImageSelection = (event) => {
+  if (showAddForm.value) {
+    addFile.value = event.target.files[0];
+  } else {
+    editFile.value = event.target.files[0];
+  }
 
+  selectedImage.value = true;
+};
 const validateUrl = (url) => {
   const trimmedUrl = url ? url.trim() : '';
 
@@ -652,7 +689,7 @@ const fetchSponsorsAndTiers = async () => {
           amount: s.amount ?? 0,
           tier: s.tier || "",
           sponsorTierId: s.tierId || null,
-          image: s.image || "",
+          imageUrl: s.imageUrl || "",
           imageWidth: s.imageWidth ?? null,
           imageHeight: s.imageHeight ?? null,   
         }))
@@ -668,6 +705,7 @@ const fetchSponsorsAndTiers = async () => {
 // Fetch sponsors on load
 onMounted(async () => {
     await fetchSponsorsAndTiers();
+    await store.dispatch('getActiveEvent');
 });
 
 // Toggle forms
@@ -675,6 +713,7 @@ const toggleAddForm = async () => {
   showAddForm.value = true;
   showRemoveForm.value = false;
   addFormError.value = null;
+  selectedImage.value = false;
 
   try{
     const resTiers = await getSponsorTiers();
@@ -707,6 +746,8 @@ const toggleRemoveTierForm = () => {
 const cancelAdd = () => {
   showAddForm.value = false;
   addFormError.value = null;
+  addFile.value = null;
+  selectedImage.value = false;
 }
 
 const cancelRemove = () => {
@@ -731,56 +772,80 @@ const handleAddSponsor = async () => {
   addFormError.value = null;
 
   const validationMessage = validateName(addName.value);
+
   if (validationMessage) {
       addFormError.value = validationMessage;
       return;
   }
 
   const urlValidationMessage = validateUrl(addWebsite.value);
+
   if(urlValidationMessage){
     addFormError.value = urlValidationMessage;
     return;
   }
 
   const tierValidationMessage = validateTierAmount(addAmount.value, addTier.value);
+
   if (tierValidationMessage) {
       addFormError.value = tierValidationMessage;
       return;
   }
 
+  if (!addFile.value) {
+    addFormError.value = "An image file must be selected.";
+    return;
+  }
+
   const transformedWebsite = transformUrlForServer(addWebsite.value);
 
   try {
+    const imageFormData = new FormData()
+    imageFormData.append("image", addFile.value);
+
+    const { data } = await axios.post(
+        `${store.state.apiBaseUrl}/api/upload`,
+        imageFormData,
+        {headers: {'Content-Type': 'multipart/form-data'}}
+    )
+
     const eventId = await getCurrentEventId();
 
-    await addSponsor({
+    const formData = {
       sponsorName: addName.value,
       sponsorWebsite: transformedWebsite,
-      image: addPNG.value || null,
+      imageUrl: data.imageUrl,
       amount: addAmount.value,
       sponsorTierId: addTier.value,
-      eventId: currentEventId.value,
-    });
+      eventId: currentEventId.value
+    }
+
+    await addSponsor(formData);
 
     // Re-fetch the sponsors list
     const res = await getSponsors(eventId);
-    const data = res.data?.sponsors || [];
-    sponsors.value = Array.isArray(data)
-      ? data.map(s => ({
+    const sponsorData = res.data?.sponsors || [];
+    sponsors.value = Array.isArray(sponsorData)
+      ? sponsorData.map(s => ({
           id: s.id,
           name: s.name,
           website: revertUrlFromServer(s.website),
+          amount: s.amount ?? 0,
           tier: s.tier || "",
-          image: s.image || ""
+          sponsorTierId: s.tierId || null,
+          imageUrl: s.imageUrl || "",
+          imageWidth: s.imageWidth ?? null,
+          imageHeight: s.imageHeight ?? null,
         }))
       : [];
 
     addName.value = "";
     addTier.value = "";
     addWebsite.value = "";
-    addPNG.value = "";
     addAmount.value = 0;
+    addFile.value = null;
     showAddForm.value = false;
+    selectedImage.value = false;
 
   } catch(err) {
     // console.error("Error adding sponsor: ", err);
@@ -870,6 +935,7 @@ const openEditTierForm = (tierData) => {
   editImageHeight.value = tierData.imageHeight;
   
   showEditTierForm.value = true;
+  selectedImage.value = false;
 };
 
 const cancelEditTier = () => {
@@ -946,6 +1012,7 @@ const openEditForm = async (index) => {
     editId.value = sponsor.id;
     editName.value = sponsor.name;
     editTier.value = tiers.value.find(t => t.tier === sponsor.tier)?.id || "";
+    editFile.value = sponsor.imageUrl;
     editAmount.value = sponsor.amount;
     editWebsite.value = revertUrlFromServer(sponsor.website);
     showEditForm.value = true;
@@ -981,14 +1048,32 @@ const handleUpdateSponsor = async () => {
       return;
   }
 
+  if (!editFile.value) {
+    editFormError.value = "An image file must be selected.";
+    return;
+  }
+
   const transformedWebsite = transformUrlForServer(editWebsite.value);
 
   try{
       if(editIndex.value !== null){
+        const imageFormData = new FormData()
+        imageFormData.append("image", editFile.value);
+
+        let imageData = {}
+        if (selectedImage.value) {
+          const {data} = await axios.post(
+              `${store.state.apiBaseUrl}/api/upload`,
+              imageFormData,
+              {headers: {'Content-Type': 'multipart/form-data'}}
+          )
+          imageData = data
+        }
+
         await updateEventSponsor(editId.value, {
             sponsorName: editName.value,
             sponsorWebsite: transformedWebsite,
-            image: editPNG.value || null,
+            imageUrl: imageData.imageUrl || "",
             amount: editAmount.value,
             sponsorTierId: editTier.value ,  //dropdown value
             eventId: currentEventId.value,
@@ -998,11 +1083,14 @@ const handleUpdateSponsor = async () => {
         sponsors.value[editIndex.value].name = editName.value;
         sponsors.value[editIndex.value].website = editWebsite.value;
         sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
-        sponsors.value[editIndex.value].image = editPNG.value || "";
+        sponsors.value[editIndex.value].imageUrl = selectedImage.value ? imageData.imageUrl : sponsors.value[editIndex.value].imageUrl;
       }
+      console.log ("")
       showEditForm.value = false;
       editIndex.value = null;
       editId.value = null;
+      editFile.value = null;
+    selectedImage.value = false;
   }catch (err){
     // console.error("Error updating sponsor: ", err);
     const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during update.";
@@ -1016,7 +1104,25 @@ const cancelEdit = () => {
     editIndex.value = null;
     editId.value = null;
     editFormError.value = null;
+  editFile.value = null;
+  selectedImage.value = false;
 };
+
+const getCurrentEventId = () => {
+    return store.getters.getEvent.id;
+}
+
+const previewImageUrl = computed(() => {
+  if (addFile.value) {
+    return URL.createObjectURL(addFile.value);
+  } else if (!selectedImage.value) {
+    console.log("hi", editFile.value);
+    return editFile.value;
+  } else if (editFile.value) {
+    console.log("hi", URL.createObjectURL(editFile.value));
+    return URL.createObjectURL(editFile.value);
+  }
+})
 </script>
 
 <style scoped>
@@ -1118,6 +1224,14 @@ const cancelEdit = () => {
     font-weight: bold;
     /* Optional: A subtle border on the left of the cell */
     border-left: 3px solid #e74c3c;
+}
+
+.preview-img {
+  width: 140px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
 }
 
 </style>
