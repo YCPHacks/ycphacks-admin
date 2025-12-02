@@ -337,7 +337,15 @@ export default{
             VISUAL_SLOTS: 4,
         }
     },
+    async mounted() {
+        await this.$store.dispatch('getActiveEvent'); 
+        this.fetchTeams();
+        this.fetchUnassignedUsers();
+    },
     computed:{
+        activeEventId() {
+            return this.$store.state.activeEvent;
+        },
         isOscar(){
             return this.$store.getters.UserRole === 'oscar';
         },
@@ -395,11 +403,13 @@ export default{
     },
     methods: {
         async fetchTeams() {
-            try{
-                const response = await axios.get(`${API_BASE_URL}/teams/all`);
+            const eventId = this.activeEventId; 
+            try {
+                // 2. Use the new endpoint and append eventId as a query parameter                
+                const response = await axios.get(`${API_BASE_URL}/teams/all?eventId=${eventId}`);
                 this.teams = response.data.data;
-            }catch(err){
-                console.error("Error fetching teams: ", err);
+            } catch(err) {
+                console.error("Error fetching teams: ", err.response?.data?.message || err.message);
             }
         },
         formatParticipants(participants){
