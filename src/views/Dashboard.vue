@@ -149,8 +149,10 @@ export default {
   async mounted() {
     await this.$store.dispatch('getActiveEvent'); 
     this.fetchUsers();
+    this.fetchActivities();
   },
   computed: {
+    ...mapGetters(['getActivities']),
     activeEventId(){
       return this.$store.state.activeEvent;
     },
