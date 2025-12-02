@@ -140,14 +140,17 @@
           </div>
 
           <div class="mb-2">
-            <label class="form-label">Image (PNG/JPG)</label>
+            <label class="form-label">Upload Image</label>
             <input
                 type="file"
                 class="form-control"
                 @change="handleImageSelection"
-                accept="image/png, image/jpeg"
-                required
+                accept="image/*"
             />
+
+            <div v-if="previewImageUrl" class="mt-2 text-center">
+              <img :src="previewImageUrl" class="preview-img" alt="Image Preview" />
+            </div>
           </div>
 
           <div class="d-flex justify-content-end gap-2">
@@ -215,6 +218,21 @@
             <label class="form-label">$ Amount</label>
             <input v-model.number="editAmount" type="number" class="form-control" required min="0" />
           </div>
+
+          <div class="mb-2">
+            <label class="form-label">Upload Image</label>
+            <input
+                type="file"
+                class="form-control"
+                @change="handleImageSelection"
+                accept="image/*"
+            />
+
+            <div v-if="previewImageUrl" class="mt-2 text-center">
+              <img :src="previewImageUrl" class="preview-img" alt="Image Preview" />
+            </div>
+          </div>
+
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEdit">
               Cancel
@@ -351,6 +369,7 @@
 import { ref, onMounted, computed } from "vue";
 import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, updateSponsorTier, removeSponsorTier } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
+import axios from "axios";
 
 // List of sponsors
 const sponsors = ref([]);
@@ -399,8 +418,9 @@ const editId = ref(null);
 const editName = ref("");
 const editTier = ref("");
 const editWebsite = ref("");
-const editPNG = ref("");
+const editFile = ref(null);
 const editAmount = ref(0);
+const selectedImage = ref(false);
 
 // Validate Characters
 const validateName = (name) => {
@@ -418,7 +438,13 @@ const validateName = (name) => {
   return null;
 };
 const handleImageSelection = (event) => {
-  addFile.value = event.target.files[0];
+  if (showAddForm.value) {
+    addFile.value = event.target.files[0];
+  } else {
+    editFile.value = event.target.files[0];
+  }
+
+  selectedImage.value = true;
 };
 const validateUrl = (url) => {
   const trimmedUrl = url ? url.trim() : '';
@@ -648,7 +674,7 @@ const fetchSponsorsAndTiers = async () => {
           amount: s.amount ?? 0,
           tier: s.tier || "",
           sponsorTierId: s.tierId || null,
-          image: s.image || "",
+          imageUrl: s.imageUrl || "",
           imageWidth: s.imageWidth ?? null,
           imageHeight: s.imageHeight ?? null,   
         }))
@@ -664,6 +690,7 @@ const fetchSponsorsAndTiers = async () => {
 // Fetch sponsors on load
 onMounted(async () => {
     await fetchSponsorsAndTiers();
+    await store.dispatch('getActiveEvent');
 });
 
 // Toggle forms
@@ -671,6 +698,7 @@ const toggleAddForm = async () => {
   showAddForm.value = true;
   showRemoveForm.value = false;
   addFormError.value = null;
+  selectedImage.value = false;
 
   try{
     const resTiers = await getSponsorTiers();
@@ -704,6 +732,7 @@ const cancelAdd = () => {
   showAddForm.value = false;
   addFormError.value = null;
   addFile.value = null;
+  selectedImage.value = false;
 }
 
 const cancelRemove = () => {
@@ -728,18 +757,21 @@ const handleAddSponsor = async () => {
   addFormError.value = null;
 
   const validationMessage = validateName(addName.value);
+
   if (validationMessage) {
       addFormError.value = validationMessage;
       return;
   }
 
   const urlValidationMessage = validateUrl(addWebsite.value);
+
   if(urlValidationMessage){
     addFormError.value = urlValidationMessage;
     return;
   }
 
   const tierValidationMessage = validateTierAmount(addAmount.value, addTier.value);
+
   if (tierValidationMessage) {
       addFormError.value = tierValidationMessage;
       return;
@@ -753,38 +785,40 @@ const handleAddSponsor = async () => {
   const transformedWebsite = transformUrlForServer(addWebsite.value);
 
   try {
+    const imageFormData = new FormData()
+    imageFormData.append("image", addFile.value);
+
+    const { data } = await axios.post(
+        `${store.state.apiBaseUrl}/api/upload`,
+        imageFormData,
+        {headers: {'Content-Type': 'multipart/form-data'}}
+    )
+
     const eventId = await getCurrentEventId();
 
-    const formData = new FormData();
-    formData.append('sponsorName', addName.value);
-    formData.append('sponsorWebsite', transformedWebsite);
-    formData.append('amount', addAmount.value);
-    formData.append('sponsorTierId', addTier.value);
-    formData.append('eventId', currentEventId.value);
-
-    formData.append('imageFile', addFile.value);
-
-    await addSponsor({
+    const formData = {
       sponsorName: addName.value,
       sponsorWebsite: transformedWebsite,
-      image: addPNG.value || null,
+      imageUrl: data.imageUrl,
       amount: addAmount.value,
       sponsorTierId: addTier.value,
-      eventId: currentEventId.value,
-    });
+      eventId: currentEventId.value
+    }
+
+    await addSponsor(formData);
 
     // Re-fetch the sponsors list
     const res = await getSponsors(eventId);
-    const data = res.data?.sponsors || [];
-    sponsors.value = Array.isArray(data)
-      ? data.map(s => ({
+    const sponsorData = res.data?.sponsors || [];
+    sponsors.value = Array.isArray(sponsorData)
+      ? sponsorData.map(s => ({
           id: s.id,
           name: s.name,
           website: revertUrlFromServer(s.website),
           amount: s.amount ?? 0,
           tier: s.tier || "",
           sponsorTierId: s.tierId || null,
-          image: s.image || "",
+          imageUrl: s.imageUrl || "",
           imageWidth: s.imageWidth ?? null,
           imageHeight: s.imageHeight ?? null,
         }))
@@ -793,10 +827,10 @@ const handleAddSponsor = async () => {
     addName.value = "";
     addTier.value = "";
     addWebsite.value = "";
-    addPNG.value = "";
     addAmount.value = 0;
     addFile.value = null;
     showAddForm.value = false;
+    selectedImage.value = false;
 
   } catch(err) {
     // console.error("Error adding sponsor: ", err);
@@ -886,6 +920,7 @@ const openEditTierForm = (tierData) => {
   editImageHeight.value = tierData.imageHeight;
   
   showEditTierForm.value = true;
+  selectedImage.value = false;
 };
 
 const cancelEditTier = () => {
@@ -962,6 +997,7 @@ const openEditForm = async (index) => {
     editId.value = sponsor.id;
     editName.value = sponsor.name;
     editTier.value = tiers.value.find(t => t.tier === sponsor.tier)?.id || "";
+    editFile.value = sponsor.imageUrl;
     editAmount.value = sponsor.amount;
     editWebsite.value = revertUrlFromServer(sponsor.website);
     showEditForm.value = true;
@@ -997,14 +1033,32 @@ const handleUpdateSponsor = async () => {
       return;
   }
 
+  if (!editFile.value) {
+    editFormError.value = "An image file must be selected.";
+    return;
+  }
+
   const transformedWebsite = transformUrlForServer(editWebsite.value);
 
   try{
       if(editIndex.value !== null){
+        const imageFormData = new FormData()
+        imageFormData.append("image", editFile.value);
+
+        let imageData = {}
+        if (selectedImage.value) {
+          const {data} = await axios.post(
+              `${store.state.apiBaseUrl}/api/upload`,
+              imageFormData,
+              {headers: {'Content-Type': 'multipart/form-data'}}
+          )
+          imageData = data
+        }
+
         await updateEventSponsor(editId.value, {
             sponsorName: editName.value,
             sponsorWebsite: transformedWebsite,
-            image: editPNG.value || null,
+            imageUrl: imageData.imageUrl || "",
             amount: editAmount.value,
             sponsorTierId: editTier.value ,  //dropdown value
             eventId: currentEventId.value,
@@ -1014,11 +1068,14 @@ const handleUpdateSponsor = async () => {
         sponsors.value[editIndex.value].name = editName.value;
         sponsors.value[editIndex.value].website = editWebsite.value;
         sponsors.value[editIndex.value].tier = tiers.value.find(t => t.id === editTier.value)?.tier || "";
-        sponsors.value[editIndex.value].image = editPNG.value || "";
+        sponsors.value[editIndex.value].imageUrl = selectedImage.value ? imageData.imageUrl : sponsors.value[editIndex.value].imageUrl;
       }
+      console.log ("")
       showEditForm.value = false;
       editIndex.value = null;
       editId.value = null;
+      editFile.value = null;
+    selectedImage.value = false;
   }catch (err){
     // console.error("Error updating sponsor: ", err);
     const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during update.";
@@ -1032,12 +1089,25 @@ const cancelEdit = () => {
     editIndex.value = null;
     editId.value = null;
     editFormError.value = null;
+  editFile.value = null;
+  selectedImage.value = false;
 };
 
 const getCurrentEventId = () => {
-    //return selectedEvent.value.id;
-    return 1;
+    return store.getters.getEvent.id;
 }
+
+const previewImageUrl = computed(() => {
+  if (addFile.value) {
+    return URL.createObjectURL(addFile.value);
+  } else if (!selectedImage.value) {
+    console.log("hi", editFile.value);
+    return editFile.value;
+  } else if (editFile.value) {
+    console.log("hi", URL.createObjectURL(editFile.value));
+    return URL.createObjectURL(editFile.value);
+  }
+})
 </script>
 
 <style scoped>
@@ -1139,6 +1209,14 @@ const getCurrentEventId = () => {
     font-weight: bold;
     /* Optional: A subtle border on the left of the cell */
     border-left: 3px solid #e74c3c;
+}
+
+.preview-img {
+  width: 140px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
 }
 
 </style>

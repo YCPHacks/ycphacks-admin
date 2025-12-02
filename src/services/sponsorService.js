@@ -14,7 +14,7 @@ export const getSponsors = async (eventId) => {
 export const addSponsor = async (formData) => {
   return axios.post(`${API_URL}`, formData, {
     headers: {
-      "Content-Type": "multipart/form-data",
+        "Content-Type": "application/json"
     },
   });
 };
