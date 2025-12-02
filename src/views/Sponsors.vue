@@ -317,14 +317,14 @@
                   >
                   
                   <td 
-                    class="text-left"
+                    class="text-center"
                     
                     :class="{ 'highlight-name-needs-update': isSponsorTierInvalid(sponsor, tiers) }"
                   >
                     {{ sponsor.name }}
                   </td>
                   
-                  <td class="text-left">
+                  <td class="text-center">
                     {{ sponsor.tier }}
                   </td>
                   
@@ -985,16 +985,6 @@ const handleUpdateSponsor = async () => {
 
   try{
       if(editIndex.value !== null){
-        console.log("Updating sponsor with:", {
-          editId: editId.value,
-          sponsorName: editName.value,
-          sponsorWebsite: transformedWebsite,
-          image: editPNG.value || null,
-          amount: editAmount.value,
-          sponsorTierId: editTier.value,
-          eventId: currentEventId.value,
-        });
-
         await updateEventSponsor(editId.value, {
             sponsorName: editName.value,
             sponsorWebsite: transformedWebsite,
@@ -1003,15 +993,7 @@ const handleUpdateSponsor = async () => {
             sponsorTierId: editTier.value ,  //dropdown value
             eventId: currentEventId.value,
         });
-
-        console.log({
-          editId: editId.value,
-          sponsorName: editName.value,
-          sponsorWebsite: editWebsite.value,
-          image: editPNG.value || null,
-          sponsorTierId: editTier.value
-        });
-
+        
         sponsors.value[editIndex.value].amount = editAmount.value;
         sponsors.value[editIndex.value].name = editName.value;
         sponsors.value[editIndex.value].website = editWebsite.value;

@@ -15,7 +15,8 @@
           <tr>
             <th class="text-left">Hardware Name</th>
             <th class="text-left">Serial Number</th>
-            <th class="text-left">Status</th>
+            <th class="text-left">Functioning</th>
+            <th class="text-left">Description</th>
             <th class="text-left">Actions</th>
           </tr>
           </thead>
@@ -26,7 +27,8 @@
           <tr v-for="hardware in hardwareList" :key="hardware.id">
             <td>{{ hardware.name }}</td>
             <td>{{ hardware.serial }}</td>
-            <td>{{ hardware.status }}</td>
+            <td>{{ hardware.functional }}</td>
+            <td>{{ hardware.description || "—" }}</td>
             <td>
               <button
                   @click="viewHardwareDetails(hardware)"
@@ -53,6 +55,30 @@
       </div>
     </div>
 
+    <!--
+        <div v-if="hardwareWithWhoHas.length > 0" class="table-container shadow-lg rounded overflow-hidden mt-5">
+          <div class="table-responsive">
+            <h4 class="text-center mt-3">Assigned Hardware</h4>
+            <table class="table table-striped table-hover">
+              <thead class="thead-light">
+              <tr>
+                <th class="text-left">Hardware Name</th>
+                <th class="text-left">Serial Number</th>
+                <th class="text-left">Assigned To</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="hardware in hardwareWithWhoHas" :key="hardware.id + '-owner'">
+                <td>{{ hardware.name }}</td>
+                <td>{{ hardware.serial }}</td>
+                <td>{{ hardware.whoHasId }}</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+    -->
+
     <!-- Modal for Adding/Editing Hardware -->
     <div v-if="showHardwareModal" class="modal-overlay">
       <div class="modal-content">
@@ -78,17 +104,26 @@
                 required
             />
           </div>
-          <div class="form-group mt-2">
-            <label for="hardwareStatus">Status</label>
-            <select
-                id="hardwareStatus"
-                v-model="hardwareForm.status"
-                class="form-control"
-                required
-            >
-              <option value="Available">Available</option>
-              <option value="Unavailable">Unavailable</option>
-            </select>
+          <div class="form-group mt-3">
+            <label>Functional</label>
+            <div class="btn-group d-flex" role="group">
+              <button
+                  type="button"
+                  class="btn"
+                  :class="hardwareForm.functional ? 'btn-success' : 'btn-outline-success'"
+                  @click="hardwareForm.functional = true"
+              >
+                Yes
+              </button>
+              <button
+                  type="button"
+                  class="btn"
+                  :class="!hardwareForm.functional ? 'btn-danger' : 'btn-outline-danger'"
+                  @click="hardwareForm.functional = false"
+              >
+                No
+              </button>
+            </div>
           </div>
           <div class="form-group mt-2">
             <label for="hardwareDescription">Description</label>
@@ -98,6 +133,20 @@
                 class="form-control"
             ></textarea>
           </div>
+
+          <!-- WhoHasId input -->
+          <!--
+          <div class="form-group mt-2">
+            <label for="hardwareWhoHasID">Who Has ID</label>
+            <input
+                type="number"
+                id="hardwareWhoHasID"
+                v-model.number="hardwareForm.whoHasID"
+                class="form-control"
+                placeholder="Enter user ID or leave blank if unassigned"
+            />
+          </div>
+          -->
 
           <div class="modal-actions mt-3">
             <button type="submit" class="btn btn-success me-2">
@@ -121,7 +170,7 @@
         <h3>Hardware Details</h3>
         <p><strong>Name:</strong> {{ selectedHardware.name }}</p>
         <p><strong>Serial Number:</strong> {{ selectedHardware.serial }}</p>
-        <p><strong>Status:</strong> {{ selectedHardware.status }}</p>
+        <p><strong>Functional:</strong> {{ selectedHardware.functional }}</p>
         <p><strong>Description:</strong> {{ selectedHardware.description }}</p>
         <div class="modal-actions">
           <button class="btn btn-secondary" @click="selectedHardware = null">
@@ -135,7 +184,7 @@
 
 <script>
 import axios from "axios";
-
+import store from "../store/store.js";
 export default {
   name: "HardwareTab",
   data() {
@@ -148,87 +197,105 @@ export default {
         id: null,
         name: "",
         serial: "",
-        status: "Available",
+        functional: true,
         description: "",
+        // whoHasID: null,
       },
     };
   },
   created() {
     this.fetchHardwareList();
   },
+  // computed: {
+  //   hardwareWithWhoHas() {
+  //     return this.hardwareList.filter(h => h.whoHasId && h.whoHasId !== "");
+  //   },
+  // },
   methods: {
-    // Fetch all hardware from backend
     async fetchHardwareList() {
       try {
-        const response = await axios.get("http://localhost:3000/hardware/all");
-        this.hardwareList = response.data.hardware || response.data;
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/register/hardware/admin`);
+        const rawData = response.data.hardware || response.data;
+
+        this.hardwareList = rawData.map(item => ({
+          id: item.hardwareId || item.id,
+          name: item.hardwareName,
+          serial: item.serial,
+          functional: item.functional ?? true,
+          description: item.description || "",
+          // whoHasId: item.whoHasId || "",
+        }));
       } catch (error) {
         console.error("Error fetching hardware:", error);
       }
     },
 
-    // Open modal for adding new hardware
     openAddModal() {
       this.isEditing = false;
       this.resetForm();
       this.showHardwareModal = true;
     },
 
-    // Edit existing hardware
     editHardware(hardware) {
       this.isEditing = true;
       this.hardwareForm = { ...hardware };
       this.showHardwareModal = true;
     },
 
-    // Save hardware (add or update)
     async saveHardware() {
       try {
+        const payload = {
+          id: this.hardwareForm.id,
+          name: this.hardwareForm.name,
+          serial: this.hardwareForm.serial,
+          functional: this.hardwareForm.functional,
+          description: this.hardwareForm.description,
+          // whoHasID: this.hardwareForm.whoHasID ? Number(this.hardwareForm.whoHasID) : null,
+        };
+
         if (this.isEditing) {
           await axios.put(
-              `http://localhost:3000/hardware/update/${this.hardwareForm.id}`,
-              this.hardwareForm
+              `${store.state.apiBaseUrl}/hardware/update/${this.hardwareForm.id}`,
+              payload
           );
         } else {
-          await axios.post("http://localhost:3000/hardware/add", this.hardwareForm);
+          await axios.post(`${store.state.apiBaseUrl}/hardware/add`, payload);
         }
         await this.fetchHardwareList();
         this.closeModal();
+
       } catch (error) {
         console.error("Error saving hardware:", error);
       }
     },
 
-    // Delete hardware by ID
     async deleteHardware(id) {
       if (!confirm("Are you sure you want to delete this hardware?")) return;
       try {
-        await axios.delete(`http://localhost:3000/hardware/delete/${id}`);
+        await axios.delete(`${store.state.apiBaseUrl}/hardware/delete/${id}`);
         await this.fetchHardwareList();
       } catch (error) {
         console.error("Error deleting hardware:", error);
       }
     },
 
-    // View hardware details
     viewHardwareDetails(hardware) {
       this.selectedHardware = hardware;
     },
 
-    // Close modal
     closeModal() {
       this.showHardwareModal = false;
       this.resetForm();
     },
 
-    // Reset form fields
     resetForm() {
       this.hardwareForm = {
         id: null,
         name: "",
         serial: "",
-        status: "Available",
+        functional: true,
         description: "",
+        // whoHasID: null,
       };
     },
   },
