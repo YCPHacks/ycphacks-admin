@@ -115,38 +115,46 @@
         <h5>Add Sponsor</h5>
         <form @submit.prevent="handleAddSponsor">
           <div v-if="addFormError" class="alert alert-danger p-2 mb-3" role="alert">
-              <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ addFormError }}
           </div>
           <div class="mb-2">
             <label class="form-label">Name</label>
             <input v-model="addName" type="text" class="form-control" required />
           </div>
           <div class="mb-2">
-              <label class="form-label">Tier</label>
-              <select v-model="addTier" class="form-control" required>
-                <option value="" disabled>Select a tier</option>
-                <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
-                  {{ tier.tier }}
-                </option>
-              </select>
+            <label class="form-label">Tier</label>
+            <select v-model="addTier" class="form-control" required>
+              <option value="" disabled>Select a tier</option>
+              <option v-for="tier in tiers" :key="tier.id" :value="tier.id">
+                {{ tier.tier }}
+              </option>
+            </select>
           </div>
           <div class="mb-2">
-              <label class="form-label">Website URL</label>
-              <input v-model="addWebsite" type="text" class="form-control" />
+            <label class="form-label">Website URL</label>
+            <input v-model="addWebsite" type="text" class="form-control" />
           </div>
           <div class="mb-2">
             <label class="form-label">$ Amount</label>
             <input v-model.number="addAmount" type="number" class="form-control" required min="0" />
           </div>
+
           <div class="mb-2">
-              <label class="form-label">Image PNG</label>
-              <input v-model="addPNG" type="text" class="form-control" />
+            <label class="form-label">Image (PNG/JPG)</label>
+            <input
+                type="file"
+                class="form-control"
+                @change="handleImageSelection"
+                accept="image/png, image/jpeg"
+                required
+            />
           </div>
+
           <div class="d-flex justify-content-end gap-2">
-              <button type="button" class="btn btn-secondary" @click="cancelAdd">
-                Cancel
-              </button>
-              <button type="submit" class="btn btn-success">Submit</button>
+            <button type="button" class="btn btn-secondary" @click="cancelAdd">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-success">Submit</button>
           </div>
         </form>
       </div>
@@ -353,7 +361,8 @@ const currentEventId = ref(null);
 const addName = ref("");
 const addTier = ref("");
 const addWebsite = ref("");
-const addPNG = ref("");
+// const addPNG = ref("");
+const addFile = ref(null);
 const addAmount = ref(0);
 const removeName = ref("");
 const showAddForm = ref(false);
@@ -408,7 +417,9 @@ const validateName = (name) => {
   }
   return null;
 };
-
+const handleImageSelection = (event) => {
+  addFile.value = event.target.files[0];
+};
 const validateUrl = (url) => {
   const trimmedUrl = url ? url.trim() : '';
 
@@ -692,6 +703,7 @@ const toggleRemoveTierForm = () => {
 const cancelAdd = () => {
   showAddForm.value = false;
   addFormError.value = null;
+  addFile.value = null;
 }
 
 const cancelRemove = () => {
@@ -733,10 +745,24 @@ const handleAddSponsor = async () => {
       return;
   }
 
+  if (!addFile.value) {
+    addFormError.value = "An image file must be selected.";
+    return;
+  }
+
   const transformedWebsite = transformUrlForServer(addWebsite.value);
 
   try {
     const eventId = await getCurrentEventId();
+
+    const formData = new FormData();
+    formData.append('sponsorName', addName.value);
+    formData.append('sponsorWebsite', transformedWebsite);
+    formData.append('amount', addAmount.value);
+    formData.append('sponsorTierId', addTier.value);
+    formData.append('eventId', currentEventId.value);
+
+    formData.append('imageFile', addFile.value);
 
     await addSponsor({
       sponsorName: addName.value,
@@ -769,6 +795,7 @@ const handleAddSponsor = async () => {
     addWebsite.value = "";
     addPNG.value = "";
     addAmount.value = 0;
+    addFile.value = null;
     showAddForm.value = false;
 
   } catch(err) {

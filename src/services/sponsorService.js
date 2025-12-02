@@ -11,8 +11,12 @@ export const getSponsors = async (eventId) => {
 };
 
 // Add sponsor
-export const addSponsor = async (sponsor) => {
-  return axios.post(`${API_URL}`, sponsor);
+export const addSponsor = async (formData) => {
+  return axios.post(`${API_URL}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 };
 
 // Update sponsor
@@ -27,21 +31,21 @@ export const deleteSponsor = async (sponsorId, eventId) => {
 
 export const getSponsorTiers = async () => {
   return axios.get(`${API_URL}/tiers`);
-}
+};
 
 export const addSponsorTier = async (tierData) => {
   return axios.post(`${API_URL}/tiers`, {
     tier: tierData.tier,
     lowerThreshold: tierData.lowerThreshold,
     width: tierData.width,
-    height: tierData.height
+    height: tierData.height,
   });
-}
+};
 
 export const updateSponsorTier = async (id, updates) => {
   return axios.put(`${API_URL}/tiers/${id}`, updates);
-}
+};
 
 export const removeSponsorTier = async (tierId) => {
   return axios.delete(`${API_URL}/tiers/${tierId}`);
-}
+};
