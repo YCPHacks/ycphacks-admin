@@ -184,7 +184,7 @@
           <button type="button" class="btn btn-secondary" @click="cancelRemove">
               Cancel
           </button>
-          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">Confirm Delete</button>
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isSponsorDeleteButtonDisabled">Confirm Delete</button>
         </form>
       </div>
     </div>
@@ -657,6 +657,23 @@ const isDeleteButtonDisabled = computed(() => {
   });
 
   return !tierExists;
+});
+
+const isSponsorDeleteButtonDisabled = computed(() => {
+    // 1. Get the entered name from the sponsor form's input
+    const enteredName = removeName.value ? removeName.value.trim() : '';
+
+    // Checks if it's blank or undefined -> should be grayed out
+    if (enteredName === '') return true;
+
+    // 2. Check the list of actual Sponsors (assuming you have a 'sponsors' array)
+    const sponsorExists = sponsors.value.some(sponsor => {
+        // We must assume the sponsor object has a 'name' property
+        return sponsor.name.toLowerCase() === enteredName.toLowerCase();
+    });
+
+    // The button is disabled if the entered name does NOT match an existing sponsor
+    return !sponsorExists;
 });
 
 const fetchSponsorsAndTiers = async () => {
