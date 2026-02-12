@@ -41,7 +41,20 @@
       <span class="badge bg-primary fs-6 text-nowrap me-3 ms-auto mb-0">
         Total Order: {{ tshirtSizeTally.totalShirts }}
       </span>
-      
+
+      <button @click="showScanner = true">
+        Scan User QR Code
+      </button>
+
+      <div v-if="showScanner" class="scanner">
+        <qrcode-stream
+            :paused="paused"
+            @init="onInit"
+            @detect="QRDetect"
+        />
+      </div>
+
+
       <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="isOscar">
         Export Users
       </button>
@@ -318,6 +331,8 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+import { QrcodeStream } from 'vue-qrcode-reader'
+
 
 const DIET_RESTRICTIONS = [
   'vegan',
@@ -378,6 +393,11 @@ const ALL_EXPORT_FIELDS = [
 
 export default {
   name: "UserManagement",
+
+  components:{
+    QrcodeStream
+  },
+
   watch: {
     'editUserData.role'(newRole, oldRole) {
       if(this.showEditUserForm && newRole !== oldRole) {
@@ -395,6 +415,9 @@ export default {
   // },
   data() {
     return {
+      showScanner: false, // These are for the QR scanner
+      paused: false,
+
       users: [],
       searchQuery: "",
       activeTab: "participant", // 'all' or 'staff'
@@ -510,6 +533,51 @@ export default {
     }
   },
   methods: {
+    async onInit(promise){
+      try{
+        await promise
+        console.log("camera ready")
+      } catch (err){
+        console.error(err)
+      }
+    },
+
+    async QRDetect(codes){
+      try{
+        let userId = codes[0].rawValue;
+
+        // remove extra quotes
+        userId = JSON.parse(userId);
+
+        console.log("Detected:",codes)
+        await this.validateQR(userId);
+      } catch (err){
+        console.error("QR parse error:", err);
+      }
+    },
+
+    async validateQR(userId){
+      try{
+        const response = await axios.post(
+            `${store.state.apiBaseUrl}/user/validate-qr`,
+            {userId}
+        );
+
+        if(response.data.valid){
+          console.log("User validated", response.data.user);
+
+          alert("Check-in successful!");
+
+          this.paused = true;
+        } else {
+          alert("Invalid QR Code");
+        }
+
+      } catch (err) {
+        console.error("Validation failed:", err);
+        alert("Server error validating QR");
+      }
+    },
     /**
      * Initializes the exportFields array based on the ALL_EXPORT_FIELDS constant.
      */
@@ -1009,6 +1077,11 @@ table tbody tr td.table-checkbox-center .form-check-input{
   transform: none !important; 
   margin-bottom: 0 !important;
   flex-shrink: 0;
+}
+
+.scanner {
+  margin-top: 1rem;
+  position: relative;
 }
 </style>
 
