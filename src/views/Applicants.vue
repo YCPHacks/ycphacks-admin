@@ -43,7 +43,7 @@
       </span>
 
       <!-- Qr Code Scanner -->
-      <button @click=openScanner class="btn btn-success mb-0 fw-bold">
+      <button @click=openScanner class="btn btn-success mb-0 fw-bold me-3">
         Scan User QR Code
       </button>
 
@@ -565,6 +565,7 @@ export default {
         console.log("Detected:",codes)
         await this.validateQR(userId);
       } catch (err){
+        alert("Invalid QR Code");
         console.error("QR parse error:", err);
       }
     },
@@ -589,7 +590,6 @@ export default {
           await this.toggleCheckIn(updatedUser);
           this.users[index].checkIn = updatedUser.checkIn;
 
-          this.paused = true;
         } else {
           alert("Invalid QR Code");
         }
@@ -735,7 +735,7 @@ export default {
         });
 
         // Set the new check in status
-        user.checkIn = newCheckInStatus;
+       user.checkIn = newCheckInStatus;
       }catch (err){
         console.error(`Error toggling check-in for user ${userId}:`, err);
       }
@@ -1065,7 +1065,7 @@ table tbody tr td.table-checkbox-center .form-check-input{
 .tshirt-compact-row {
   background-color: #f8f9fa; /* Light background for visibility */
   border: 1px solid #dee2e6;
-  padding: 8px 15px; /* Smaller padding */
+  padding: 8px 5px; /* Smaller padding */
   border-radius: 0.5rem;
   font-size: 0.9rem; /* Slightly smaller font */
   display: flex; /* Ensures flexible alignment */
