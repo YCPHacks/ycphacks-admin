@@ -41,7 +41,31 @@
       <span class="badge bg-primary fs-6 text-nowrap me-3 ms-auto mb-0">
         Total Order: {{ tshirtSizeTally.totalShirts }}
       </span>
-      
+
+      <!-- Qr Code Scanner -->
+      <button @click=openScanner class="btn btn-success mb-0 fw-bold me-3">
+        Scan User QR Code
+      </button>
+
+      <div v-if="showScanner" class="modal-overlay-scanner">
+        <div class="modal-content-scanner">
+        <h3>Scan QR code</h3>
+
+        <qrcode-stream
+            :paused="paused"
+            @init="onInit"
+            @detect="QRDetect"
+            class="scanner-camera"
+        />
+
+        <button @click="closeScanner" class="btn btn-success mb-0 fw-bold">
+          Close
+        </button>
+
+        </div>
+      </div>
+
+
       <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="isOscar">
         Export Users
       </button>
@@ -318,6 +342,8 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+import { QrcodeStream } from 'vue-qrcode-reader'
+
 
 const DIET_RESTRICTIONS = [
   'vegan',
@@ -378,6 +404,11 @@ const ALL_EXPORT_FIELDS = [
 
 export default {
   name: "UserManagement",
+
+  components:{
+    QrcodeStream
+  },
+
   watch: {
     'editUserData.role'(newRole, oldRole) {
       if(this.showEditUserForm && newRole !== oldRole) {
@@ -395,6 +426,9 @@ export default {
   // },
   data() {
     return {
+      showScanner: false, // These are for the QR scanner
+      paused: false,
+
       users: [],
       searchQuery: "",
       activeTab: "participant", // 'all' or 'staff'
@@ -510,6 +544,73 @@ export default {
     }
   },
   methods: {
+    /*Initialize QR code scanner */
+    async onInit(promise){
+      try{
+        await promise
+        console.log("camera ready")
+      } catch (err){
+        console.error(err)
+      }
+    },
+
+    /* Actions that will be preformed if a QR code is detected */
+    async QRDetect(codes){
+      try{
+        let userId = codes[0].rawValue;
+
+        // remove extra quotes
+        userId = JSON.parse(userId);
+
+        console.log("Detected:",codes)
+        await this.validateQR(userId);
+      } catch (err){
+        alert("Invalid QR Code");
+        console.error("QR parse error:", err);
+      }
+    },
+
+    /* validate QR code data */
+    async validateQR(userId){
+      try{
+        const response = await axios.post(
+            `${store.state.apiBaseUrl}/user/validate-qr`,
+            {userId}
+        );
+
+        if(response.data.valid){
+          console.log("User validated", response.data.user);
+
+          const updatedUser = response.data.user;
+
+          const index = this.users.findIndex(u => u.id === updatedUser.id);
+          alert("Check-in successful!");
+
+          // Update only the checkIn property
+          await this.toggleCheckIn(updatedUser);
+          this.users[index].checkIn = updatedUser.checkIn;
+
+        } else {
+          alert("Invalid QR Code");
+        }
+
+      } catch (err) {
+        console.error("Validation failed:", err);
+        alert("Server error validating QR");
+      }
+    },
+
+    /* Open the Scanner modal window */
+    openScanner(){
+      this.showScanner = true;
+      this.paused = false;
+    },
+
+    /* Closes the Scanner */
+    closeScanner(){
+      this.showScanner = false;
+      this.paused = true;
+    },
     /**
      * Initializes the exportFields array based on the ALL_EXPORT_FIELDS constant.
      */
@@ -632,8 +733,9 @@ export default {
         await axios.put(`${store.state.apiBaseUrl}/user/${userId}/checkin`, {
           checkIn: newCheckInStatus
         });
-        
-        this.$set(user, 'checkin', newCheckInStatus);
+
+        // Set the new check in status
+       user.checkIn = newCheckInStatus;
       }catch (err){
         console.error(`Error toggling check-in for user ${userId}:`, err);
       }
@@ -963,7 +1065,7 @@ table tbody tr td.table-checkbox-center .form-check-input{
 .tshirt-compact-row {
   background-color: #f8f9fa; /* Light background for visibility */
   border: 1px solid #dee2e6;
-  padding: 8px 15px; /* Smaller padding */
+  padding: 8px 5px; /* Smaller padding */
   border-radius: 0.5rem;
   font-size: 0.9rem; /* Slightly smaller font */
   display: flex; /* Ensures flexible alignment */
@@ -1010,5 +1112,36 @@ table tbody tr td.table-checkbox-center .form-check-input{
   margin-bottom: 0 !important;
   flex-shrink: 0;
 }
+
+/* These are for the QR scanner */
+.modal-overlay-scanner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 9999;
+}
+
+.modal-content-scanner {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 400px;
+  text-align: center;
+}
+
+.scanner-camera {
+  width: 100%;
+  height: 300px;
+}
+
+
 </style>
 
