@@ -9,6 +9,7 @@ export default createStore({
         user: {},
         sponsors: [],
         categories: [],
+        prizes: [],
         activities: [],
         events: [],
         event: {},
@@ -50,6 +51,9 @@ export default createStore({
         },
         updateCategories(state, index, newCategory) {
             state.categories[index] = newCategory
+        },
+        setPrizes(state, prizes) {
+            state.prizes = prizes;
         },
         setAuditLogs(state, auditLogs) {
             state.auditLogs = auditLogs;
@@ -129,6 +133,8 @@ export default createStore({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(activity)
                 });
+
+
 
                 const data = await response.json();
                 if (response.ok) {
@@ -344,7 +350,7 @@ export default createStore({
 
             try {
                 if (!category || Object.keys(category).length === 0) {
-                    return { success: false, message: "Event is empty" };
+                    return { success: false, message: "Category is empty" };
                 }
 
                 response = await axios.post(`${state.apiBaseUrl}/category/create`,
@@ -352,7 +358,7 @@ export default createStore({
                         categoryName: category.categoryName,
                         eventId: category.eventId
                     },
-                    {headers: { 'Content-Type': 'application/json' }}
+                    { headers: { 'Content-Type': 'application/json' }}
                 );
             } catch (error) {
                 return { success: false, message: error || "Network or server error while creating category" };
@@ -373,11 +379,10 @@ export default createStore({
                 if (!category || Object.keys(category).length === 0) {
                     return { success: false, message: "Category is empty" };
                 }
-                const response = await fetch(`${state.apiBaseUrl}/category/update`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(category)
-                });
+                const response = await axios.post(`${state.apiBaseUrl}/category/update`,
+                    category,
+                    { headers: {'Content-Type': 'application/json'} }
+                );
 
                 const data = await response.json();
                 if (!response.ok) {
@@ -394,7 +399,7 @@ export default createStore({
         },
         async getCategoriesForEvent({commit, state}, eventId){
             try{
-                const response = await axios.get(`${state.apiBaseUrl}/category/by-event/${eventId}`);
+                const response = await axios.get(`${state.apiBaseUrl}/category/by-event/${eventId.value}`);
                 commit("setCategories", response.data.categories);
 
                 return {
@@ -410,20 +415,21 @@ export default createStore({
             }
         },
         async deleteCategory({ commit, state }, id) {
+
+            if (!id) {
+                return { success: false, message: "Missing category ID" };
+            }
+
             try {
-                if (!id) {
-                    return { success: false, message: "Something went wrong" };
-                }
-
-                const response = await fetch(`${state.apiBaseUrl}/category/delete/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const response = await axios.delete(`${state.apiBaseUrl}/category/delete/${id}`,
+                    {},
+                    { headers: { 'Content-Type': 'application/json' } }
+                );
 
 
-                const data = await response.json();
-                if (!response.ok) {
-                    return { success: false, message: data.message || "Failed to delete event", errors: data.errors };
+                const data = await response.data;
+                if (!data) {
+                    return { success: false, message: data.message || "Failed to delete category", errors: data.errors };
                 }
 
                 commit("setCategories",
@@ -431,12 +437,115 @@ export default createStore({
                         (category) => category.id !== id
                 ));
 
-                return { success: true, message: data.message || "Event deleted successfully" };
+                return { success: true, message: data.message || "Category deleted successfully" };
 
             } catch (error) {
+                console.log("failure: " + error.message)
                 return { success: false, message: error.message || "Network or server error while deleting event" };
             }
         },
+        async createPrize({ commit, state }, prize) {
+            let response = null;
+
+            try {
+                if (!prize || Object.keys(prize).length === 0) {
+                    return { success: false, message: "Prize is empty" };
+                }
+
+                response = await axios.post(`${state.apiBaseUrl}/prize/create`,
+                    {
+                        eventId: prize.eventId,
+                        prizeName: prize.prizeName,
+                        categoryId: prize.categoryId,
+                        placement: prize.placement,
+                        handedOut: prize.handedOut
+                    },
+                    {headers: { 'Content-Type': 'application/json' }}
+                );
+            } catch (error) {
+                return { success: false, message: error || "Network or server error while creating category" };
+            }
+
+            const data = response.data;
+            if (!response.status === 201) {
+                return { success: false, message: data.message || "Failed to create category", errors: data.errors };
+            }
+
+            commit("setPrizes", [...state.prizes, data.prize]);
+            return { success: true, message: data.message || "Category created successfully" };
+        },
+        async updatePrize({ commit, state }, prize) {
+
+            if (!prize || Object.keys(prize).length === 0) {
+                return { success: false, message: "Prize is empty" };
+            }
+
+            try {
+                const response = await axios.put(`${state.apiBaseUrl}/prize/update`,
+                    prize,
+                    { headers: {'Content-Type': 'application/json' } }
+                );
+
+                const data = await response.json();
+                if (!response.ok) {
+                    return { success: false, message: data.message || "Failed to update category", errors: data.errors };
+                }
+
+                commit("updatePrizes", state.prizes.findIndex(p => p.id === prize.id), prize)
+
+                return { success: true, message: data.message || "Category updated successfully" };
+
+            } catch (error) {
+                return { success: false, message: error.message || "Network or server error while updating category" };
+            }
+        },
+        async getPrizesForEvent({commit, state}, eventId){
+            try{
+                const response = await axios.get(`${state.apiBaseUrl}/prize/by-event/${eventId.value}`);
+
+                const data = await response.data;
+                commit("setPrizes", data.prizes);
+
+                return {
+                    success: true,
+                    message: response.data.message
+                };
+            }catch(err){
+                console.error("Error fetching categories for event: ", err);
+                return {
+                    success: false,
+                    message: err.message || "Error fetching categories for event"
+                }
+            }
+        },
+        async deletePrize({ commit, state }, id) {
+
+            try {
+                if (!id) {
+                    return { success: false, message: "Missing prize ID" };
+                }
+
+                const response = await axios.delete(`${state.apiBaseUrl}/prize/delete/${id}`,
+                    {},
+                    { headers: { 'Content-Type': 'application/json' } }
+                );
+
+                const data = await response.data;
+                if (!data) {
+                    return { success: false, message: data.message || "Failed to delete event", errors: data.errors };
+                }
+
+                commit("setPrizes",
+                    state.prizes.filter(
+                        p => p.id !== id
+                    ));
+
+                return { success: true, message: data.message || "Prize deleted successfully" };
+
+            } catch (error) {
+                return { success: false, message: error.message || "Network or server error while deleting prize" };
+            }
+        }
     },
     getters: {
         isAuthenticated: (state) => !!state.user,
@@ -444,6 +553,7 @@ export default createStore({
         allSponsors: (state) => state.sponsors,
         getActivities: (state) => state.activities,
         getCategories: (state) => state.categories,
+        getPrizes: (state) => state.prizes,
         getEvents: (state) => state.events,
         getEvent: (state) => state.event,
         getAuditLogs: (state) => state.auditLogs

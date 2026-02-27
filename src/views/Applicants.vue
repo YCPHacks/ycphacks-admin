@@ -281,7 +281,7 @@
           </thead>
           <tbody>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="5" class="text-center py-4 text-muted">
+              <td colspan="10" class="text-center py-4 text-muted">
                 No users found
               </td>
             </tr>

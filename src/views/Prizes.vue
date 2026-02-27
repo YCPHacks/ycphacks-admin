@@ -18,6 +18,8 @@
       </div>
     </div>
 
+
+
     <!-- Add Category Form -->
     <!-- This really only has the name, but will eventually have the subcategories -->
     <!-- Considering making the prizes be added directly within the category form -->
@@ -30,7 +32,7 @@
           </div>
           <div class="mb-2">
             <label class="form-label">Name</label>
-            <input v-model="currentAddCategoryName" type="text" class="form-control" required/>
+            <input v-model="currentAddCategory_Name" type="text" class="form-control" required/>
           </div>
           <div class="d-flex justify-content-end gap-2 mt-3">
             <button type="button" class="btn btn-secondary" @click="cancelAddCategory">
@@ -58,14 +60,14 @@
           <p>Please confirm the name of the tier you wish to delete:</p>
           <div class="mb-2">
             <label class="form-label">Name</label>
-            <input v-model="removeCategoryName" type="text" class="form-control" />
+            <input v-model="currentRemoveCategory_Name" type="text" class="form-control" />
           </div>
           
           <button type="button" class="btn btn-secondary" @click="cancelRemoveCategory">
             Cancel
           </button>
           
-          <button type="submit" class="btn btn-danger ms-2" :disabled="isDeleteButtonDisabled">
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isCategoryDeleteButtonDisabled">
             Confirm Delete
           </button>
         </form>
@@ -74,7 +76,7 @@
 
     <!-- Edit Category Popup -->
     <div v-if="showEditCategoryForm && isOscar" class="popup-overlay">
-      <div class="card p-3 popup" :key="currentEditCategoryId">
+      <div class="card p-3 popup" :key="currentEditCategory_Id">
         <h5>Edit Category</h5>
         <form @submit.prevent="handleUpdateCategory">
           <div v-if="editCategoryFormError" class="alert alert-danger p-2 mb-3" role="alert">
@@ -82,7 +84,7 @@
           </div>
           <div class="mb-2">
             <label class="form-label">Category Name</label>
-            <input v-model="currentEditCategoryName" type="text" class="form-control" required />
+            <input v-model="currentEditCategory_Name" type="text" class="form-control" required />
           </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEditCategory">
@@ -94,26 +96,113 @@
       </div>
     </div>
 
-    <!-- Categorises Tables -->
+
+    <!-- Add Prize Form -->
+    <div v-if="showAddPrizeForm" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Add Category</h5>
+        <form @submit.prevent="handleAddPrize">
+          <div v-if="addPrizeFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ addPrizeFormError }}
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="currentAddPrize_Name" type="text" class="form-control" required/>
+
+            <label class="form-label">Placement</label>
+            <input v-model="currentAddPrize_Placement" type="number" class="form-control" required/>
+
+            <label class="form-label">Handed Out</label>
+            <input v-model="currentAddPrize_HandedOut" type="checkbox" class=""/>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-secondary" @click="cancelAddPrize">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-success">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Remove Prize Form -->
+    <div v-if="showRemovePrizeForm && isOscar" class="popup-overlay">
+      <div class="card p-3 popup">
+        <h5>Remove Category</h5>
+        <form @submit.prevent="handleRemovePrize">
+          <div v-if="removePrizeFormError" class="alert alert-danger p-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ removePrizeFormError }}
+          </div>
+          <p class="alert alert-warning">
+            <strong>⚠️ Are you absolutely sure?</strong>
+            This will permanently delete the prize and cannot be undone.
+          </p>
+
+          <p>Please confirm the name of the prize you wish to delete in {{}}:</p>
+          <div class="mb-2">
+            <label class="form-label">Name</label>
+            <input v-model="currentRemovePrize_Name" type="text" class="form-control" />
+          </div>
+
+          <button type="button" class="btn btn-secondary" @click="cancelRemovePrize">
+            Cancel
+          </button>
+
+          <button type="submit" class="btn btn-danger ms-2" :disabled="isPrizeDeleteButtonDisabled">
+            Confirm Delete
+          </button>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- Categories Tables -->
+    <div v-if="categories.length === 0" class="col-md-12 mb-4">
+      <div class="alert alert-info p-2 text-center">No categories yet</div>
+    </div>
+
     <div class="col-md-12 mb-4" v-for="categoryData in categories" :key="categoryData.id" style="padding-bottom: 5vw">
-      <h4 class="mb-3">{{categoryData.categoryName}}</h4>
+      <div class="container">
+        <div class="row justify-content-between">
+
+          <h4 class="col">{{categoryData.categoryName}}</h4>
+
+          <div v-if="isOscar" class="col text-end">
+            <button class="btn btn-primary me-2" @click="openAddPrizeForm(categoryData.id)">
+              Add Prize
+            </button>
+
+            <button class="btn btn-primary" @click="openRemovePrizeForm(categoryData.id)">
+              Remove Prize
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div class="table-container shadow-lg rounded overflow-hidden">
         <div class="table-responsive">
           <table class="table table-striped table-hover">
             <thead class="thead-light">
               <tr>
-                <th class="text-left">Prizes</th>
+                <th class=text-left>Placement</th>
+                <th class=text-left>Name</th>
+                <th class=text-left>Handed Out?</th>
               </tr>
             </thead>
             <tbody>
-              <tr> <!--v-if="categories.length === 0">-->
-                <td colspan="2" class="alert alert-info p-2 text-center">No prizes yet</td>
+              <tr v-if="prizes.filter((p) => p.categoryId === categoryData.id).length === 0">
+                <td colspan=3 class="alert alert-info text-center">No prizes yet</td>
               </tr>
 
-<!--              &lt;!&ndash; @click="openEditCategoryForm(categoryData)" &ndash;&gt;-->
-<!--              <tr v-for="" :key=""  style="cursor: pointer;">-->
-<!--              </tr>-->
+              <tr
+                  v-for="prize in prizes
+                      .filter(p => p.categoryId === categoryData.id)
+                      .sort((p1, p2) => p1.placement - p2.placement)">
+
+                <td class=text-center>{{prize.placement}}</td>
+                <td class=text-center>{{prize.prizeName}}</td>
+                <td class=text-center>{{prize.handedOut? "Yes" : "No"}}</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -125,32 +214,57 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useStore } from 'vuex';
-import axios from "axios";
 
 const store = useStore();
 
 // List of categories
 const categories = ref([]);
-// const tiers = ref([]);
+const prizes = ref([]);
 const currentEventId = ref(null);
+
 
 // Category Form states
 const showAddCategoryForm = ref(false);
 const showRemoveCategoryForm = ref(false);
 const showEditCategoryForm = ref(false);
 
-const currentAddCategoryName = ref("");
+const currentAddCategory_Name = ref("");
 const addCategoryFormError = ref(null);
 
-const currentEditCategoryId = ref(null);
-const currentEditCategoryName = ref(null);
-const currentEditCategoryEventId = ref(null);
+const currentEditCategory_Id = ref(null);
+const currentEditCategory_Name = ref(null);
+const currentEditCategory_EventId = ref(null);
 const editCategoryFormError = ref(null);
 
-const removeCategoryName = ref("");
-const currentRemoveCategoryId = ref(null);
+const currentRemoveCategory_Name = ref("");
+const currentRemoveCategory_Id = ref(null);
 const removeCategoryFormError = ref(null);
 
+
+// Prize Form States
+const showAddPrizeForm = ref(false);
+const showRemovePrizeForm = ref(false);
+const showEditPrizeForm = ref(false);
+
+const currentAddPrize_Name = ref("");
+const currentAddPrize_CategoryId = ref(null);
+const currentAddPrize_Placement = ref(null);
+const currentAddPrize_HandedOut = ref(null);
+const addPrizeFormError = ref(null);
+
+const currentEditPrize_Id = ref(null);
+const currentEditPrize_EventId = ref(null);
+const currentEditPrize_Name = ref("");
+const currentEditPrize_CategoryId = ref(null);
+const currentEditPrize_Placement = ref(null);
+const currentEditPrize_HandedOut = ref(null);
+const editPrizeFormError = ref(null);
+
+const currentRemovePrize_Id = ref(null);
+const currentRemovePrize_EventId = ref(null);
+const currentRemovePrize_Name = ref("");
+const currentRemovePrize_CategoryId = ref(null);
+const removePrizeFormError = ref(null);
 
 // Validate Characters
 const validateName = (name) => {
@@ -175,8 +289,8 @@ const isOscar = computed(() => {
     return store.getters.UserRole === 'oscar';
 });
 
-const isDeleteButtonDisabled = computed(() => {
-  const enteredName = removeCategoryName.value.trim();
+const isCategoryDeleteButtonDisabled = computed(() => {
+  const enteredName = currentRemoveCategory_Name.value.trim();
 
   // Checks if it's blank -> should be grayed out
   if(enteredName === '') return true;
@@ -189,25 +303,45 @@ const isDeleteButtonDisabled = computed(() => {
   return !categoryExists;
 });
 
-// and prizes once i get this up and running
+const isPrizeDeleteButtonDisabled = computed(() => {
+  const enteredName = currentRemovePrize_Name.value.trim();
+
+  // Checks if it's blank -> should be grayed out
+  if(enteredName === '') return true;
+
+  const prizeExists = prizes.value
+      .filter(p => p.categoryId === currentRemovePrize_CategoryId.value)
+      .some(prize => {
+
+        // Checks if the name exists
+        return prize.prizeName.toLowerCase() === enteredName.toLocaleLowerCase();
+  });
+
+  return !prizeExists;
+});
+
+
 const fetchCategories = async () => {
   try{
-    let eventId = null;
+    if (!currentEventId.value) {
+      let eventId = null;
 
-    const activeEvent = await store.dispatch('getActiveEvent');
+      const activeEvent = await store.dispatch('getActiveEvent');
 
-    if (activeEvent.success) {
-      eventId = store.getters.getEvent.id;
+      if (activeEvent.success) {
+        eventId = store.getters.getEvent.id;
+      }
+      else
+      {
+        console.warn("Could not determine current event ID. Cannot fetch categories.");
+        categories.value = [];
+        return;
+      }
+
+      currentEventId.value = eventId;
     }
-    else
-    {
-      console.warn("Could not determine current event ID. Cannot fetch categories.");
-      categories.value = [];
-      return;
-    }
 
-    currentEventId.value = eventId;
-    const getEventCategoriesSuccess = await store.dispatch('getCategoriesForEvent', eventId);
+    const getEventCategoriesSuccess = await store.dispatch('getCategoriesForEvent', currentEventId);
 
     if (!getEventCategoriesSuccess.success) {
       console.warn("Could not get categories from event ID.");
@@ -228,16 +362,66 @@ const fetchCategories = async () => {
   }
 }
 
+const fetchPrizes = async () => {
+  try{
+    if (!currentEventId.value) {
+      let eventId = null;
+
+      const activeEvent = await store.dispatch('getActiveEvent');
+
+      if (activeEvent.success) {
+        eventId = store.getters.getEvent.id;
+      }
+      else
+      {
+        console.warn("Could not determine current event ID. Cannot fetch prizes.");
+        prizes.value = [];
+        return;
+      }
+
+      currentEventId.value = eventId;
+    }
+
+    const getEventPrizesSuccess = await store.dispatch('getPrizesForEvent', currentEventId);
+
+    if (!getEventPrizesSuccess.success) {
+      console.warn("Could not get prizes from event ID.");
+      prizes.value = [];
+      return;
+    }
+
+    let prizesForEvent = store.getters.getPrizes;
+    prizes.value = Array.isArray(prizesForEvent)
+        ? prizesForEvent.map(s => ({
+          id: s.id,
+          eventId: s.eventId,
+          prizeName: s.prizeName,
+          categoryId: s.categoryId,
+          placement: s.placement,
+          handedOut: s.handedOut
+        })) : [];
+  }
+  catch (err){
+    console.error("Error fetching categories: ", err);
+  }
+}
+
 // Fetch categories on load
 onMounted(async () => {
+
+    const activeEventResp = await store.dispatch('getActiveEvent');
+    if (activeEventResp) {
+      currentEventId.value = activeEventResp.eventId;
+    }
+
     await fetchCategories();
-    await store.dispatch('getActiveEvent');
+    await fetchPrizes();
 });
 
 // Toggle Category Forms
 const toggleAddCategoryForm = async () => {
   showAddCategoryForm.value = !showAddCategoryForm.value;
-  currentAddCategoryName.value = '';
+  currentAddCategory_Name.value = '';
   addCategoryFormError.value = null;
 };
 
@@ -249,55 +433,135 @@ const toggleRemoveCategoryForm = () => {
 // Cancel Category Forms
 const cancelAddCategory = () => {
   showAddCategoryForm.value = false;
-  currentAddCategoryName.value = '';
+  currentAddCategory_Name.value = '';
   addCategoryFormError.value = null;
 }
 
 const cancelEditCategory = () => {
   showEditCategoryForm.value = false;
-  currentEditCategoryId.value = null;
+  currentEditCategory_Id.value = null;
   editCategoryFormError.value = null;
 }
 
 const cancelRemoveCategory = () => {
     showRemoveCategoryForm.value = false;
     removeCategoryFormError.value = null;
-    removeCategoryName.value = "";
+    currentRemoveCategory_Name.value = "";
 }
 
 
-// Handles Adding Tiers
+// Toggle Prize Forms
+const openAddPrizeForm = (categoryId) => {
+  showAddPrizeForm.value = true;
+  currentAddPrize_Name.value = "";
+  currentAddPrize_CategoryId.value = categoryId;
+  currentAddPrize_Placement.value = null;
+  currentAddPrize_HandedOut.value = false;
+  addPrizeFormError.value = null;
+}
+
+const openRemovePrizeForm = (categoryId) => {
+  showRemovePrizeForm.value = true;
+  currentRemovePrize_Name.value = "";
+  currentRemovePrize_CategoryId.value = categoryId;
+  removePrizeFormError.value = null;
+}
+
+const closeAddPrizeForm = () => {
+  showAddPrizeForm.value = false;
+  currentAddPrize_Name.value = "";
+  currentAddPrize_CategoryId.value = null;
+  currentAddPrize_Placement.value = null;
+  currentAddPrize_HandedOut.value = false;
+  addPrizeFormError.value = null;
+}
+
+
+// Cancel Prize Forms
+const cancelAddPrize = () => {
+  showAddPrizeForm.value = false;
+  currentAddPrize_Name.value = "";
+  currentAddPrize_CategoryId.value = null;
+  currentAddPrize_Placement.value = null;
+  currentAddPrize_HandedOut.value = null;
+  addPrizeFormError.value = null;
+}
+
+const cancelEditPrize = () => {
+  showEditPrizeForm.value = false;
+  currentEditPrize_Id.value = null;
+  currentEditPrize_Name.value = "";
+  currentEditPrize_CategoryId.value = null;
+  currentEditPrize_Placement.value = null;
+  currentEditPrize_HandedOut.value = null;
+  editPrizeFormError.value = null;
+}
+
+const cancelRemovePrize = () => {
+  showRemovePrizeForm.value = false;
+  currentRemovePrize_Id.value = null;
+  currentRemovePrize_Name.value = "";
+  currentRemovePrize_CategoryId.value = null;
+  removePrizeFormError.value = null;
+}
+
+
 const handleAddCategory = async () => {
   addCategoryFormError.value = null;
 
-  if(currentAddCategoryName.value === null){
+  if(currentAddCategory_Name.value === null){
     addCategoryFormError.value = "Name must not be null.";
     return;
   }
 
-  // try{
-    const test = await store.dispatch('createCategory', {
-      categoryName: currentAddCategoryName.value,
+  try{
+    const category = await store.dispatch('createCategory', {
+      categoryName: currentAddCategory_Name.value,
       eventId: currentEventId.value
     });
-
-    console.log(test)
 
     const resCategories = await store.getters.getCategories;
     categories.value = resCategories === null ? [] : resCategories;
 
     showAddCategoryForm.value = false;
-  // }catch (err){
-  //
-  //   addCategoryFormError.value = err.response?.data?.error || "Failed to add sponsor tier.";
-  // }
+  }catch (err){
+    addCategoryFormError.value = err || "Failed to add sponsor tier.";
+  }
+}
+
+
+const handleAddPrize = async () => {
+  addPrizeFormError.value = null;
+
+  if(currentAddPrize_Name.value === null){
+    addCategoryFormError.value = "Name must not be null.";
+    return;
+  }
+
+  try{
+    const prize = await store.dispatch('createPrize', {
+      eventId: currentEventId.value,
+      prizeName: currentAddPrize_Name.value,
+      categoryId: currentAddPrize_CategoryId.value,
+      placement: currentAddPrize_Placement.value,
+      handedOut: currentAddPrize_HandedOut.value
+    });
+
+    const resPrizes = await store.getters.getPrizes;
+    prizes.value = resPrizes === null ? [] : resPrizes;
+
+    showAddPrizeForm.value = false;
+  }catch (err){
+    addPrizeFormError.value = err || "Failed to add sponsor tier.";
+  }
+
 }
 
 
 const handleUpdateCategory = async () => {
     editCategoryFormError.value = null;
 
-    const editCategoryName = Number(currentEditCategoryName);
+    const editCategoryName = Number(currentEditCategory_Name);
 
     if(!editCategoryName.value){
       editCategoryFormError.value = "All fields must be valid. Category Name cannot be empty.";
@@ -315,59 +579,99 @@ const handleUpdateCategory = async () => {
 
       showEditCategoryForm.value = false;
   }catch (err){
-      editCategoryFormError.value = err.response?.data?.error || "Failed to update sponsor tier.";
+      editCategoryFormError.value = err || "Failed to update sponsor tier.";
   }
 }
 
 const handleRemoveCategory = async () => {
   removeCategoryFormError.value = null;
 
-  const categoryToRemove = categories.value.find((s) => s.categoryName === removeCategoryName.value);
+  const categoryToRemove = categories.value.find((s) => s.categoryName.toLocaleLowerCase() === currentRemoveCategory_Name.value.toLocaleLowerCase());
 
   if(!categoryToRemove || !categoryToRemove.id){
-    removeCategoryFormError.value = `Sponsor named "${categoryToRemove.categoryName}" was not found. Please check the spelling.`;
+    removeCategoryFormError.value = `Category named "${currentRemoveCategory_Name.value}" was not found. Please check the spelling.`;
     return;
   }
 
   try {
-        const idToDelete = categoryToRemove.id;
-        await store.dispatch('deleteCategory', idToDelete);
+    const idToDelete = categoryToRemove.id;
+    const deleteResp = await store.dispatch('deleteCategory', idToDelete);
 
-        const index = categories.value.findIndex((c) => c.id === idToDelete);
-        if(index !== -1){
-            categories.value.splice(index, 1);
-        }
+    if (!deleteResp.success) {
+      console.warn(deleteResp.message)
+      return;
+    }
+
+    const index = categories.value.findIndex((c) => c.id === idToDelete);
+    if(index !== -1){
+        categories.value.splice(index, 1);
+    }
 
     const resCategories = await store.getters.getCategories;
     categories.value = resCategories === null ? [] : resCategories;
 
-        removeCategoryName.value = "";
-        showRemoveCategoryForm.value = false;
-    } catch (err) {
-        removeCategoryFormError.value = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor tier due to a server error.";
-    }
+    currentRemoveCategory_Name.value = "";
+    showRemoveCategoryForm.value = false;
+
+  } catch (err) {
+      removeCategoryFormError.value = err || "Failed to delete category due to a server error.";
+  }
 };
+
+const handleRemovePrize = async () => {
+  removePrizeFormError.value = null;
+
+  const prizeToRemove = prizes.value
+      .filter(p => p.categoryId === currentRemovePrize_CategoryId.value)
+      .find(s => s.prizeName.toLocaleLowerCase() === currentRemovePrize_Name.value.toLocaleLowerCase());
+
+  if(!prizeToRemove || !prizeToRemove.id){
+    removePrizeFormError.value = `Prize named "${currentRemovePrize_Name.value}" was not found. Please check the spelling.`;
+    return;
+  }
+
+  try {
+    const idToDelete = prizeToRemove.id;
+    const deleteResp = await store.dispatch('deletePrize', idToDelete);
+
+    if (!deleteResp.success) {
+      console.warn(deleteResp.message)
+      return;
+    }
+
+    const index = prizes.value.findIndex((c) => c.id === idToDelete);
+    if(index !== -1){
+      prizes.value.splice(index, 1);
+    }
+
+    const resPrizes = await store.getters.getPrizes;
+    prizes.value = resPrizes === null ? [] : resPrizes;
+
+    currentRemovePrize_Name.value = "";
+    showRemovePrizeForm.value = false;
+
+  } catch (err) {
+    removePrizeFormError.value = err || "Failed to delete sponsor tier due to a server error.";
+  }
+};
+
 
 // Open edit form
 const openEditCategoryForm = async (index) => {
-    const category = categories.value[index];
-    currentEditCategoryId.value = category.id;
-    currentEditCategoryName.value = category.categoryName;
-    currentEditCategoryEventId.value = category.eventId;
-    showEditCategoryForm.value = true;
-    editCategoryFormError.value = null;
+  const category = categories.value[index];
+  currentEditCategory_Id.value = category.id;
+  currentEditCategory_Name.value = category.categoryName;
+  currentEditCategory_EventId.value = category.eventId;
+  showEditCategoryForm.value = true;
+  editCategoryFormError.value = null;
 
-     try{
-      const resCategories = await store.dispatch('getCategoriesForEvent', currentEditCategoryId);
-      categories.value = Array.isArray(resCategories.data) ? resCategories.data : [];
-    }catch(err){
-      console.error("Error fetching categories: ", err);
-    }
+  try{
+    const resCategories = await store.dispatch('getCategoriesForEvent', currentEditCategory_Id);
+    categories.value = Array.isArray(resCategories.data) ? resCategories.data : [];
+  }catch(err){
+    console.error("Error fetching categories: ", err);
+  }
 };
-
-const getCurrentEventId = () => {
-    return store.getters.getEvent.id;
-}
 </script>
 
 <style scoped>
