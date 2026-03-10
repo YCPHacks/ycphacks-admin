@@ -6,16 +6,6 @@
           <span class="visually-hidden">Loading...</span>
         </div>
       </div>
-
-      <div v-if="showAlert">
-        <b-alert
-            v-model="showAlert"
-            :dismissible="true"
-            variant="danger"
-        >
-          <span>{{ message }}</span>
-        </b-alert>
-      </div>
       <h2>YCP Hacks Admin Login</h2>
       <form v-if="!isLoading" @submit.prevent="handleSubmit">
         <div class="input-group">
@@ -26,6 +16,17 @@
           <label for="password">Password</label>
           <input type="password" id="password" v-model="password" placeholder="********" required/>
         </div>
+
+        <div v-if="showAlert">
+          <b-alert
+              v-model="showAlert"
+              variant="danger"
+              class="error-box"
+          >
+            <span><strong>Error: </strong>{{ message }}</span>
+          </b-alert>
+        </div>
+
         <button type="submit" class="login-button">Sign in</button>
       </form>
     </div>
@@ -151,5 +152,17 @@ export default {
 
 .signup-link a:hover {
   text-decoration: underline;
+}
+
+.error-box {
+  background-color: rgba(255, 182, 193, 0.2); /* Translucent pink */
+  border: 1px solid #ffb6c1; /* Solid pink border */
+  color: #d81b60; /* Pink text */
+  padding: 14px;
+  border-radius: 8px;
+  margin: 15px 0;
+  font-size: 0.9rem;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(255, 182, 193, 0.1);
 }
 </style>
