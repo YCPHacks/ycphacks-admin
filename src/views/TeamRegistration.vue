@@ -3,6 +3,16 @@
         <h2 class="mb-4 text-center">Team Registration</h2>
 
         <div class="d-flex justify-content-end gap-2 mb-3">
+          <div class="text-end mb-3">
+            <button class="btn btn-primary" @click="downloadTeamsPDF">
+                Export Teams
+            </button>
+            <div v-if="PDFloading" class="fixed bottom-4 right-4 bg-gray-800 text-black px-4 py-2 rounded shadow">
+              Generating PDF, please wait...
+            </div>
+          </div>
+
+
             <!-- Add Team Button -->
             <div class="text-end mb-3">
                 <button class="btn btn-primary" @click="toggleAddForm">
@@ -61,6 +71,7 @@
             </div>
         </div>
 
+
         <!-- Add New Team Modal -->
         <div v-if="showAddForm" class="popup-overlay">
             <div class="card p-4 popup">
@@ -111,9 +122,7 @@
                     <!-- Participants Selection -->
                     <div class="mb-4">
                         <label class="form-label">Initial Participants (Select {{ MIN_PARTICIPANTS }} or more) *</label>
-                        
                         <div v-if="loading && showAddForm" class="text-info fst-italic">Loading participants...</div>
-                        
                         <div v-else-if="checkedInUnassignedUsers.length > 0">
                             <select 
                                 v-model="selectedParticipantsIds" 
@@ -249,7 +258,6 @@
                             <label class="form-label">Team Participants (Select {{ MIN_PARTICIPANTS }} or more) *</label>
                             
                             <div v-if="loading && showEditForm" class="text-info fst-italic">Loading participants...</div>
-                            
                             <div v-else-if="allAvailableUsers.length > 0">
                                 <select 
                                     v-model="editSelectedParticipantsIds" 
@@ -331,6 +339,7 @@ export default{
             },
             selectedParticipantsIds: [], // Participants currently selected in the form
             loading: false,
+            PDFloading: false,
             error: null, // Error message for the Add Form
             success: null, // Success message for the Add Form
             MIN_PARTICIPANTS: 1,
@@ -344,7 +353,7 @@ export default{
     },
     computed:{
         activeEventId() {
-            return this.$store.state.activeEvent;
+          return this.$store.state.event?.id;
         },
         isOscar(){
             return this.$store.getters.UserRole === 'oscar';
@@ -403,7 +412,7 @@ export default{
     },
     methods: {
         async fetchTeams() {
-            const eventId = this.activeEventId; 
+            const eventId = this.activeEventId;
             try {
                 // 2. Use the new endpoint and append eventId as a query parameter                
                 const response = await axios.get(`${API_BASE_URL}/teams/all?eventId=${eventId}`);
@@ -450,7 +459,7 @@ export default{
         async fetchUnassignedUsers(){
             try{
                 const res = await axios.get(`${API_BASE_URL}/teams/unassignedParticipants`);
-                
+
                 this.unassignedUsers = res.data.data
                     .filter(participant => participant.isBanned !== true && participant.isBanned !== 1)
                     .map(participant => {
@@ -548,6 +557,34 @@ export default{
             await this.fetchUnassignedUsers();
             this.loading = false;
         },
+        async downloadTeamsPDF() {
+          try {
+            this.PDFloading = true;
+            const eventId = this.activeEventId;
+            const response = await axios.get(`${API_BASE_URL}/puppeteer/teamPDF/${eventId}`,{
+              responseType: 'blob',
+            });
+
+            const fileURL = window.URL.createObjectURL(new Blob([response.data], {type: 'application/pdf'}));
+
+            const fileLink = document.createElement('a');
+            fileLink.href = fileURL;
+            fileLink.setAttribute('download', 'JudgeTeams.pdf');
+
+            document.body.appendChild(fileLink);
+            fileLink.click()
+
+            document.body.removeChild(fileLink);
+            window.URL.revokeObjectURL(fileURL);
+            this.PDFloading = false;
+
+          } catch(err) {
+            console.error("Error exporting team: ", err);
+            this.error = err.response?.data?.message || err.response?.data?.error || "Failed to export teams.";
+            this.PDFloading = false;
+          }
+
+        },
         handleCancel() {
             // Reset form state and close modal
             this.formData = {
@@ -587,20 +624,12 @@ export default{
                 // --- Actual API Call (Uncomment when API is ready) ---
                 const response = await axios.post(`${API_BASE_URL}/teams/create`, teamPayload);
                 
-                // --- Mock API success for demonstration ---
-                await new Promise(resolve => setTimeout(resolve, 1000)); 
-                
                 this.success = `Team '${this.formData.teamName}' successfully registered and ${teamPayload.participantIds.length} members assigned!`;
                 
                 // Re-fetch the data to update the lists
                 this.fetchTeams();
                 this.fetchUnassignedUsers();
 
-                // Close the form after a short delay to show the success message
-                setTimeout(() => {
-                    this.handleCancel(); 
-                    this.success = null; 
-                }, 1500);
 
             } catch (err) {
                 console.error("Error adding team: ", err);
