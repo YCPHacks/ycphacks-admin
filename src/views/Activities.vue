@@ -7,6 +7,9 @@
         </b-dropdown>
       </span>
     </h2>
+    <!-- Import CSV Activities Button -->
+    <button v-if="isOscar" @click="showImportCSVActivityModal = true" class="btn btn-primary import-activity-btn">Import CSV File</button>
+
     <!-- Create Activity Button -->
     <button @click="showCreateActivityModal = true" class="btn btn-primary create-activity-btn">Create Activity</button>
 
@@ -144,6 +147,14 @@
       </div>
     </div>
   </div>
+
+  <div v-if="showImportCSVActivityModal" class="modal-overlay">
+    <div class="modal-content">
+      <input type="file" @change="handleFileUpload" accept=".csv" />
+      <button @click="uploadFile">Upload</button>
+      <button type="button" class="btn btn-secondary" @click="showImportCSVActivityModal = false; resetActivityForm()">Cancel</button>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -161,6 +172,7 @@ export default {
       showCreateActivityModal: false,
       showUpdateActivityModal: false,
       showDeleteActivityModal: false,
+      showImportCSVActivityModal: false,
       sortKey: 'activityName', // default column
       sortOrder: 'asc',        // 'asc' or 'desc'
       searchQuery: '',
@@ -171,6 +183,7 @@ export default {
         activityDate: '',
         activityDescription: ''
       },
+      file: null,
       deleteActivityName: '',
       isLoading: false,
       errors: {},
@@ -181,6 +194,9 @@ export default {
     ...mapGetters(['getActivities', 'UserRole', 'getEvent', 'getEvents']),
     event() {
       return this.getEvent;
+    },
+    isOscar() {
+      return store.getters.UserRole === 'oscar';
     },
     sortedActivities() {
       if (!this.getActivities || this.getActivities.length === 0) return [];
@@ -323,6 +339,27 @@ export default {
         activityDate: '',
         activityDescription: ''
       };
+    },
+
+    handleFileUpload(e) {
+      this.file = e.target.files[0];
+    },
+
+    async uploadFile() {
+      this.loading = true;
+
+      const result = await store.dispatch("importCSVActivities", this.file);
+
+      if (result.success) {
+        await this.fetchActivities(); // Refresh activity list
+        this.showImportCSVActivityModal = false; // Close modal
+        this.resetActivityForm();
+        this.deleteActivityName = '';
+      } else {
+        this.message = result.message;
+      }
+
+      this.loading = false;
     }
   }
 };
@@ -338,6 +375,12 @@ export default {
   position: absolute;
   top: 20px;
   right: 20px;
+}
+
+.import-activity-btn {
+  position: absolute;
+  top: 20px;
+  right: 150px;
 }
 
 .table-container {

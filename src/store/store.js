@@ -496,6 +496,30 @@ export default createStore({
             } catch (error) {
                 return { success: false, message: error.message || "Network or server error while deleting prize" };
             }
+        },
+        async importCSVActivities({ commit, state }, file) {
+            try {
+                if(!file)
+                    return { success: false, message: "Missing CSV File" };
+                console.log(file);
+                const csvText = await file.text();
+                const response = await axios.post(`${state.apiBaseUrl}/event/import`, csvText, {headers: {'Content-type':'text/csv'}});
+
+                const data = response.data;
+                if (!data) {
+                    return { success: false, message: data.message || "Failed to import CSV file", errors: data.errors };
+                }
+
+                commit("setActivities",
+                    [
+                        ...state.activities,
+                        ...data.parsedCSVData
+                    ]
+                );
+            } catch(error) {
+                return { success: false, message: error.message || "Network or server error while importing CSV file" };
+            }
+            return {success: true, message: "CSV was properly imported"};
         }
     },
     getters: {

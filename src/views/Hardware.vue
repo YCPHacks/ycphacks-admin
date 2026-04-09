@@ -1,10 +1,12 @@
 <template>
   <div class="container mt-5">
-    <h2 class="mb-4 text-center">Hardware List</h2>
+    <button v-if="isOscar" @click="showImportCSVActivityModal = true" class="btn btn-primary add-hardware-btn">Import CSV File</button>
 
     <button @click="openAddModal" class="btn btn-primary add-hardware-btn">
       Add Hardware
     </button>
+    <h2 class="mb-4 text-center">Hardware List</h2>
+
 
     <div class="table-container shadow-lg rounded overflow-hidden mt-3">
       <div class="table-responsive">
@@ -181,6 +183,7 @@ export default {
       isEditing: false,
       isUploading: false, // New state for better UX
       selectedFile: null,
+      showImportCSVHardwareModal: false,
 
       hardwareForm: {
         id: null,
@@ -206,6 +209,9 @@ export default {
       }
       // 2. Show the existing primary image URL if editing
       return this.currentPrimaryImageUrl;
+    },
+    isOscar() {
+      return store.getters.UserRole === 'oscar';
     }
   },
 
@@ -402,6 +408,7 @@ export default {
 .add-hardware-btn {
   float: right;
   margin-bottom: 10px;
+  margin-right: 20px;
 }
 
 .hardware-img {
@@ -445,4 +452,5 @@ export default {
   display: flex;
   justify-content: flex-end;
 }
+
 </style>
