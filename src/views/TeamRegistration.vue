@@ -7,7 +7,12 @@
             <button class="btn btn-primary" @click="downloadTeamsPDF">
                 Export Teams
             </button>
+            <div v-if="PDFloading" class="fixed bottom-4 right-4 bg-gray-800 text-black px-4 py-2 rounded shadow">
+              Generating PDF, please wait...
+            </div>
           </div>
+
+
             <!-- Add Team Button -->
             <div class="text-end mb-3">
                 <button class="btn btn-primary" @click="toggleAddForm">
@@ -334,6 +339,7 @@ export default{
             },
             selectedParticipantsIds: [], // Participants currently selected in the form
             loading: false,
+            PDFloading: false,
             error: null, // Error message for the Add Form
             success: null, // Success message for the Add Form
             MIN_PARTICIPANTS: 1,
@@ -347,7 +353,7 @@ export default{
     },
     computed:{
         activeEventId() {
-            return this.$store.state.activeEvent;
+          return this.$store.state.event?.id;
         },
         isOscar(){
             return this.$store.getters.UserRole === 'oscar';
@@ -406,7 +412,7 @@ export default{
     },
     methods: {
         async fetchTeams() {
-            const eventId = this.activeEventId; 
+            const eventId = this.activeEventId;
             try {
                 // 2. Use the new endpoint and append eventId as a query parameter                
                 const response = await axios.get(`${API_BASE_URL}/teams/all?eventId=${eventId}`);
@@ -553,7 +559,9 @@ export default{
         },
         async downloadTeamsPDF() {
           try {
-            const response = await axios.get(`${API_BASE_URL}/puppeteer/teamPDF/${this.eventId}`,{
+            this.PDFloading = true;
+            const eventId = this.activeEventId;
+            const response = await axios.get(`${API_BASE_URL}/puppeteer/teamPDF/${eventId}`,{
               responseType: 'blob',
             });
 
@@ -568,11 +576,14 @@ export default{
 
             document.body.removeChild(fileLink);
             window.URL.revokeObjectURL(fileURL);
+            this.PDFloading = false;
+
           } catch(err) {
             console.error("Error exporting team: ", err);
             this.error = err.response?.data?.message || err.response?.data?.error || "Failed to export teams.";
-
+            this.PDFloading = false;
           }
+
         },
         handleCancel() {
             // Reset form state and close modal

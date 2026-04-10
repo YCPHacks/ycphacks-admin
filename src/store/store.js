@@ -132,22 +132,15 @@ export default createStore({
                 if (!activity || Object.keys(activity).length === 0) {
                     return { success: false, message: "Activity is empty" };
                 }
-                const response = await fetch(`${state.apiBaseUrl}/event/activity/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(activity)
-                });
+                const response = await axios.post(`${state.apiBaseUrl}/event/activity/`, activity);
 
+                const data = response.data;
 
-
-                const data = await response.json();
-                if (response.ok) {
-                    return { success: true, message: data.message || "Activity created successfully" };
-                } else {
-                    return { success: false, message: data.message || "Failed to create activity", errors: data.errors };
+                return {
+                    success: true, message: data.message || "Activity created successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message || "Network or server error while creating activity" };
+                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to create activity" };
             }
         },
         async updateActivity({ commit, state }, activity) {
@@ -155,20 +148,15 @@ export default createStore({
                 if (!activity || Object.keys(activity).length === 0) {
                     return { success: false, message: "Activity is empty" };
                 }
-                const response = await fetch(`${state.apiBaseUrl}/event/activity`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(activity)
-                });
+                const response = await axios.put(`${state.apiBaseUrl}/event/activity`, activity);
 
-                const data = await response.json();
-                if (response.ok) {
-                    return { success: true, message: data.message || "Activity updated successfully" };
-                } else {
-                    return { success: false, message: data.message || "Failed to update activity", errors: data.errors };
+                const data = response.data
+
+                return {
+                    success: true, message: data.message || "Activity updated successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message || "Network or server error while updating activity" };
+                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to update activity" };
             }
         },
         async deleteActivity({ commit, state }, id) {
@@ -177,20 +165,15 @@ export default createStore({
                     return { success: false, message: "Something went wrong" };
                 }
 
-                const response = await fetch(`${state.apiBaseUrl}/event/activity/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const response = await axios.delete(`${state.apiBaseUrl}/event/activity/${id}`, id);
 
-                const data = await response.json();
+                const data = response.data
 
-                if (response.ok) {
-                    return { success: true, message: data.message || "Activity deleted successfully" };
-                } else {
-                    return { success: false, message: data.message || "Failed to delete activity", errors: data.errors };
+                return {
+                    success: true, message: data.message || "Activity deleted successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.message || "Network or server error while deleting activity" };
+                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to delete activity" };
             }
         },
         async getAllActivities({ commit, state }, eventId) {
@@ -216,41 +199,30 @@ export default createStore({
                 if (!event || Object.keys(event).length === 0) {
                     return { success: false, message: "Event is empty" };
                 }
-                const response = await fetch(`${state.apiBaseUrl}/event/create`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(event)
-                });
+                const response = await axios.post(`${state.apiBaseUrl}/event/create`, event);
 
-                const data = await response.json();
-                if (response.ok) {
-                    return { success: true, message: data.message || "Event created successfully" };
-                } else {
-                    return { success: false, message: data.message || "Failed to create event", errors: data.errors };
+                const data = response.data;
+                return {
+                    success: true, message: data.message || "Event created successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message || "Network or server error while creating event" };
+                return { success: false, message: error.response?.data?.message, errors: error.response?.data?.errors  || "Error creating event" };
             }
         },
         async updateEvent({ commit, state }, event) {
             try {
                 if (!event || Object.keys(event).length === 0) {
-                    return { success: false, message: "Event is empty" };
+                    return {success: false, message: "Event is empty"};
                 }
-                const response = await fetch(`${state.apiBaseUrl}/event/update`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(event)
-                });
+                const response = await axios.put(`${state.apiBaseUrl}/event/update`, event);
 
-                const data = await response.json();
-                if (response.ok) {
-                    return { success: true, message: data.message || "Event updated successfully" };
-                } else {
-                    return { success: false, message: data.message || "Failed to update event", errors: data.errors };
+                const data = response.data
+
+                return {
+                    success: true, message: data.message || "Event updated successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message || "Network or server error while updating event" };
+                return { success: false, message: error.response?.data?.message, errors: error.response?.data?.errors || "Error updating event" };
             }
         },
         async deleteEvent({ commit, state }, id) {
@@ -259,20 +231,15 @@ export default createStore({
                     return { success: false, message: "Something went wrong" };
                 }
 
-                const response = await fetch(`${state.apiBaseUrl}/event/delete/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const response = await axios.delete(`${state.apiBaseUrl}/event/delete/${id}`, id);
 
-                const data = await response.json();
+                const data = response.data
 
-                if (response.ok) {
-                    return { success: true, message: data.message || "Event deleted successfully" };
-                } else {
-                    return { success: false, message: data.message || "Failed to delete event", errors: data.errors };
+                return {
+                    success: true, message: data.message || "Event deleted successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.message || "Network or server error while deleting event" };
+                return { success: false, message: error.message, errors: error.response?.data?.errors || "Error deleting event" };
             }
         },
         async getAllEvents({ commit, state }) {
@@ -325,20 +292,11 @@ export default createStore({
                 return {success: false, message: error.response?.data?.message || "Error fetching active event"};
             }
         },
-        async getAuditLogs({ commit }, requestPayload = {}) {
+        async getAuditLogs({ commit, state, }, requestPayload = {}) {
             try {
-                const response = await fetch(`${state.apiBaseUrl}/audit-logs/search`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestPayload),
-                });
+                const response = await axios.post(`${state.apiBaseUrl}/audit-logs/search`, {});
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    throw new Error(errorData?.message || "Failed to fetch audit logs");
-                }
-
-                const data = await response.json();
+                const data = response.data
                 commit("setAuditLogs", data.logs || []);
 
                 return { success: true, message: data.message, pagination: data.pagination };
@@ -543,6 +501,49 @@ export default createStore({
             } catch (error) {
                 return { success: false, message: error.message || "Network or server error while deleting prize" };
             }
+        },
+        async importCSVActivities({ commit, state }, file) {
+            try {
+                if(!file)
+                    return { success: false, message: "Missing CSV File" };
+                console.log(file);
+                const csvText = await file.text();
+                const response = await axios.post(`${state.apiBaseUrl}/event/import`, csvText, {headers: {'Content-type':'text/csv'}});
+
+                const data = response.data;
+                if (!data) {
+                    return { success: false, message: data.message || "Failed to import CSV file", errors: data.errors };
+                }
+
+                commit("setActivities",
+                    [
+                        ...state.activities,
+                        ...data.parsedCSVData
+                    ]
+                );
+            } catch(error) {
+                return { success: false, message: error.message || "Network or server error while importing CSV file" };
+            }
+            return {success: true, message: "CSV was properly imported"};
+        },
+
+        async importCSVHardware({ state }, file) {
+            console.log(file);
+            try {
+                if(!file)
+                    return { success: false, message: "Missing CSV File" };
+                const csvText = await file.text();
+                console.log(csvText);
+                const response = await axios.post(`${state.apiBaseUrl}/hardware/import`, csvText, {headers: {'Content-type':'text/csv'}});
+
+                const data = response.data;
+                if (!data) {
+                    return { success: false, message: data.message || "Failed to import CSV file", errors: data.errors };
+                }
+            } catch(error) {
+                return { success: false, message: error.message || "Network or server error while importing CSV file" };
+            }
+            return {success: true, message: "CSV was properly imported"};
         }
     },
     getters: {
