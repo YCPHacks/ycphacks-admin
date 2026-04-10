@@ -196,10 +196,13 @@
     </div>
 
     <div class="col-md-12 mb-4" v-for="categoryData in categories" :key="categoryData.id" style="padding-bottom: 5vw">
-      <div class="container">
-        <div class="row justify-content-between">
+      <div class="container ">
+        <div class="row mb-1 justify-content-between">
 
-          <h4 class="col" @click="toggleEditCategoryForm(categoryData.id)">{{categoryData.categoryName}}</h4>
+          <div class="col col-auto me-1 align-self-center px-2">
+            <h4 class="mb-0">{{categoryData.categoryName}}</h4>
+          </div>
+          <button class="col col-1 btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
 
           <div v-if="isOscar" class="col text-end">
             <button class="btn btn-primary me-2" @click="openAddPrizeForm(categoryData.id)">
@@ -757,20 +760,13 @@ const handleRemovePrize = async () => {
 
 
 // Open edit form
-const openEditCategoryForm = async (index) => {
-  const category = categories.value[index];
+const openEditCategoryForm = async (categoryId) => {
+  const category = categories.value.find((category) => category.id === categoryId);
   currentEditCategory_Id.value = category.id;
   currentEditCategory_Name.value = category.categoryName;
   currentEditCategory_EventId.value = category.eventId;
   showEditCategoryForm.value = true;
   editCategoryFormError.value = null;
-
-  try{
-    const resCategories = await store.dispatch('getCategoriesForEvent', currentEditCategory_Id);
-    categories.value = Array.isArray(resCategories.data) ? resCategories.data : [];
-  }catch(err){
-    console.error("Error fetching categories: ", err);
-  }
 };
 </script>
 

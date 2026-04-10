@@ -390,6 +390,11 @@ export default createStore({
                     { headers: {'Content-Type': 'application/json'} }
                 );
 
+                const categories = this.getters.getCategories;
+                const updatedCategoryIndex = categories.value.findIndex((category) => category === response.updatedCategory)
+                categories.value[updatedCategoryIndex] = response.updatedCategory;
+                commit("updateCategories", categories)
+
                 return { success: true, updatedCategory: response.updatedCategory, message: data.message || "Category updated successfully" };
 
             } catch (error) {

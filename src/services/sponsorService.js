@@ -31,6 +31,7 @@ export const deleteSponsor = async (sponsorId, eventId) => {
 };
 
 export const getSponsorTiers = async () => {
+    console.log(API_URL)
   return axios.get(`${API_URL}/tiers`);
 };
 
