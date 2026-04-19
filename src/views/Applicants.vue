@@ -574,11 +574,11 @@ export default {
     },
 
     /* validate QR code data */
-    async validateQR(userId){
+    async validateQR(identifier){
       try{
         const response = await axios.post(
             `${store.state.apiBaseUrl}/user/validate-qr`,
-            {userId}
+            {email: identifier}
         );
 
         if(response.data.valid){
