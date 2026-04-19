@@ -9,16 +9,7 @@
           Add Category
         </button>
       </div>
-
-      <!-- Remove Category Button -->
-      <div v-if="isOscar" class="text-end mb-3">
-        <button class="btn btn-primary" @click="toggleRemoveCategoryForm">
-          Remove Category
-        </button>
-      </div>
     </div>
-
-
 
     <!-- Add Category Form -->
     <!-- This really only has the name, but will eventually have the subcategories -->
@@ -43,35 +34,6 @@
       </div>
     </div>
 
-    <!-- Remove Category Form -->
-    <div v-if="showRemoveCategoryForm && isOscar" class="popup-overlay">
-      <div class="card p-3 popup">
-        <h5>Remove Category</h5>
-        <form @submit.prevent="handleRemoveCategory">
-          <div v-if="removeCategoryFormError" class="alert alert-danger p-2 mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> {{ removeCategoryFormError }}
-          </div>
-          <p class="alert alert-warning">
-            <strong>⚠️ Are you absolutely sure?</strong> 
-            This will permanently delete the category and cannot be undone.
-          </p>
-          
-          <p>Please confirm the name of the category you wish to delete:</p>
-          <div class="mb-2">
-            <label class="form-label">Name</label>
-            <input v-model="currentRemoveCategory_Name" type="text" class="form-control" />
-          </div>
-          
-          <button type="button" class="btn btn-secondary" @click="cancelRemoveCategory">
-            Cancel
-          </button>
-          
-          <button type="submit" class="btn btn-danger ms-2" :disabled="isCategoryDeleteButtonDisabled">
-            Confirm Delete
-          </button>
-        </form>
-      </div>
-    </div>
 
     <!-- Edit Category Popup -->
     <div v-if="showEditCategoryForm && isOscar" class="popup-overlay">
@@ -86,7 +48,10 @@
             <input v-model="currentEditCategory_Name" type="text" class="form-control" required />
           </div>
           <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-secondary" @click="cancelEditCategory">
+            <button type="button" class="btn btn-danger" @click="handleRemoveCategory">
+              Remove
+            </button>
+            <button type="button" class="btn btn-secondary align-self-end ms-auto" @click="cancelEditCategory">
               Cancel
             </button>
             <button type="submit" class="btn btn-success">Save</button>
@@ -142,8 +107,11 @@
             <label class="form-label">Handed Out</label>
             <input v-model="currentEditPrize_HandedOut" type="checkbox" class=""/>
           </div>
-          <div class="d-flex justify-content-end gap-2 mt-3">
-            <button type="button" class="btn btn-secondary" @click="cancelEditPrize">
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-danger" @click="handleRemovePrize">
+              Remove
+            </button>
+            <button type="button" class="btn btn-secondary align-self-end ms-auto" @click="cancelEditPrize">
               Cancel
             </button>
             <button type="submit" class="btn btn-success">Submit</button>
@@ -152,51 +120,13 @@
       </div>
     </div>
 
-    <!-- Remove Prize Form -->
-    <div v-if="showRemovePrizeForm && isOscar" class="popup-overlay">
-      <div class="card p-3 popup">
-        <h5>Remove Prize</h5>
-        <form @submit.prevent="handleRemovePrize">
-          <div v-if="removePrizeFormError" class="alert alert-danger p-2 mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> {{ removePrizeFormError }}
-          </div>
-          <p class="alert alert-warning">
-            <strong>⚠️ Are you absolutely sure?</strong>
-            This will permanently delete the prize and cannot be undone.
-          </p>
-
-          <p>
-            Please confirm the name and/or placement of the prize you wish to delete in the
-            {{categories.find(c => c.categoryId === currentRemovePrize_CategoryId.value).categoryName}} category:
-          </p>
-
-          <div class="mb-2">
-            <label class="form-label">Name</label>
-            <input v-model="currentRemovePrize_Name" type="text" class="form-control"/>
-
-            <label class="form-label">Placement</label>
-            <input v-model="currentRemovePrize_Placement" type="number" min=1 class="form-control"/>
-          </div>
-
-          <button type="button" class="btn btn-secondary" @click="cancelRemovePrize">
-            Cancel
-          </button>
-
-          <button type="submit" class="btn btn-danger ms-2" :disabled="isPrizeDeleteButtonDisabled">
-            Confirm Delete
-          </button>
-        </form>
-      </div>
-    </div>
-
-
     <!-- Categories Tables -->
     <div v-if="categories.length === 0" class="col-md-12 mb-4">
       <div class="alert alert-info p-2 text-center">No categories yet</div>
     </div>
 
     <div class="col-md-12 mb-4" v-for="categoryData in categories" :key="categoryData.id" style="padding-bottom: 5vw">
-      <div class="container ">
+      <div class="container">
         <div class="row mb-1 justify-content-between">
 
           <div class="col col-auto me-1 align-self-center px-2">
@@ -205,12 +135,8 @@
           <button class="col col-1 btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
 
           <div v-if="isOscar" class="col text-end">
-            <button class="btn btn-primary me-2" @click="openAddPrizeForm(categoryData.id)">
+            <button class="btn btn-primary" @click="openAddPrizeForm(categoryData.id)">
               Add Prize
-            </button>
-
-            <button class="btn btn-primary" @click="openRemovePrizeForm(categoryData.id)">
-              Remove Prize
             </button>
           </div>
         </div>
@@ -245,6 +171,9 @@
           </table>
         </div>
       </div>
+      <div class="ms-2">
+        <p>Click to edit a prize.</p>
+      </div>
     </div>
   </div>
 </template>
@@ -263,7 +192,6 @@ const currentEventId = ref(null);
 
 // Category Form states
 const showAddCategoryForm = ref(false);
-const showRemoveCategoryForm = ref(false);
 const showEditCategoryForm = ref(false);
 
 const currentAddCategory_Name = ref("");
@@ -274,14 +202,8 @@ const currentEditCategory_Name = ref(null);
 const currentEditCategory_EventId = ref(null);
 const editCategoryFormError = ref(null);
 
-const currentRemoveCategory_Name = ref("");
-const currentRemoveCategory_Id = ref(null);
-const removeCategoryFormError = ref(null);
-
-
 // Prize Form States
 const showAddPrizeForm = ref(false);
-const showRemovePrizeForm = ref(false);
 const showEditPrizeForm = ref(false);
 
 const currentAddPrize_Name = ref("");
@@ -298,12 +220,6 @@ const currentEditPrize_Placement = ref(null);
 const currentEditPrize_HandedOut = ref(null);
 const editPrizeFormError = ref(null);
 
-const currentRemovePrize_Id = ref(null);
-const currentRemovePrize_EventId = ref(null);
-const currentRemovePrize_CategoryId = ref(null);
-const currentRemovePrize_Name = ref("");
-const currentRemovePrize_Placement = ref(null);
-const removePrizeFormError = ref(null);
 
 // Validate Characters
 const validateName = (name) => {
@@ -342,54 +258,6 @@ const isCategoryDeleteButtonDisabled = computed(() => {
   return !categoryExists;
 });
 
-const isPrizeDeleteButtonDisabled = computed(() => {
-  const enteredName = currentRemovePrize_Name.value.trim();
-  const enteredPlacement = Number(currentRemovePrize_Placement.value);
-
-  const enteredNameIsEmpty = enteredName === '';
-  const enteredPlacementIsEmpty = enteredPlacement === 0;
-
-  // both are empty
-  if (enteredNameIsEmpty && enteredPlacementIsEmpty) return true;
-
-  // both are populated
-  if (!enteredNameIsEmpty && !enteredPlacementIsEmpty) {
-    const prizeExists = prizes.value
-        .filter(p => p.categoryId === currentRemovePrize_CategoryId.value)
-        .some(prize => {
-
-          // Checks if the placement exists
-          return prize.placement === enteredPlacement &&
-              prize.prizeName.toLowerCase() === enteredName.toLocaleLowerCase();
-        });
-
-    return !prizeExists;
-  }
-
-  // only name is populated
-  if (!enteredNameIsEmpty) {
-    const prizeExists = prizes.value
-        .filter(p => p.categoryId === currentRemovePrize_CategoryId.value)
-        .some(prize => {
-
-          // Checks if the name exists
-          return prize.prizeName.toLowerCase() === enteredName.toLocaleLowerCase();
-        });
-
-    return !prizeExists;
-  }
-
-  // only placement is populated
-  const prizeExists = prizes.value
-      .filter(p => p.categoryId === currentRemovePrize_CategoryId.value)
-      .some(prize => {
-
-        // Checks if the name exists
-        return prize.placement === enteredPlacement;
-      });
-
-  return !prizeExists;
-});
 
 
 const fetchCategories = async () => {
@@ -503,11 +371,6 @@ const toggleEditCategoryForm = async (categoryId) => {
   editCategoryFormError.value = null;
 };
 
-const toggleRemoveCategoryForm = () => {
-  showRemoveCategoryForm.value = !showRemoveCategoryForm.value;
-  removeCategoryFormError.value = null;
-}
-
 // Cancel Category Forms
 const cancelAddCategory = () => {
   showAddCategoryForm.value = false;
@@ -519,12 +382,6 @@ const cancelEditCategory = () => {
   showEditCategoryForm.value = false;
   currentEditCategory_Id.value = null;
   editCategoryFormError.value = null;
-}
-
-const cancelRemoveCategory = () => {
-    showRemoveCategoryForm.value = false;
-    removeCategoryFormError.value = null;
-    currentRemoveCategory_Name.value = "";
 }
 
 
@@ -552,14 +409,6 @@ const openEditPrizeForm = (prizeId) => {
   addPrizeFormError.value = null;
 }
 
-const openRemovePrizeForm = (categoryId) => {
-  showRemovePrizeForm.value = true;
-  currentRemovePrize_Name.value = "";
-  currentRemovePrize_CategoryId.value = categoryId;
-  removePrizeFormError.value = null;
-}
-
-
 // Cancel Prize Forms
 const cancelAddPrize = () => {
   showAddPrizeForm.value = false;
@@ -578,15 +427,6 @@ const cancelEditPrize = () => {
   currentEditPrize_HandedOut.value = null;
   editPrizeFormError.value = null;
 }
-
-const cancelRemovePrize = () => {
-  showRemovePrizeForm.value = false;
-  currentRemovePrize_Id.value = null;
-  currentRemovePrize_Name.value = "";
-  currentRemovePrize_CategoryId.value = null;
-  removePrizeFormError.value = null;
-}
-
 
 const handleAddCategory = async () => {
   addCategoryFormError.value = null;
@@ -672,23 +512,13 @@ const handleEditPrize = async () => {
 }
 
 const handleRemoveCategory = async () => {
-  removeCategoryFormError.value = null;
-
-  const categoryToRemove = categories.value.find((s) => s.categoryName.toLocaleLowerCase() === currentRemoveCategory_Name.value.toLocaleLowerCase());
-
-  if(!categoryToRemove || !categoryToRemove.id){
-    removeCategoryFormError.value = `Category named "${currentRemoveCategory_Name.value}" was not found. Please check the spelling.`;
-    return;
-  }
 
   try {
-    const idToDelete = categoryToRemove.id;
+    const idToDelete = currentEditCategory_Id.value;
     const deleteResp = await store.dispatch('deleteCategory', idToDelete);
 
-    if (!deleteResp.success) {
-      console.warn(deleteResp.message)
+    if (!deleteResp.success)
       return;
-    }
 
     const index = categories.value.findIndex((c) => c.id === idToDelete);
     if(index !== -1){
@@ -698,63 +528,44 @@ const handleRemoveCategory = async () => {
     const resCategories = await store.getters.getCategories;
     categories.value = resCategories === null ? [] : resCategories;
 
-    currentRemoveCategory_Name.value = "";
-    showRemoveCategoryForm.value = false;
+
+    currentEditCategory_Id.value = null;
+    currentEditCategory_Name.value = null;
+    currentEditCategory_EventId.value = null;
+
+    showEditCategoryForm.value = false;
 
   } catch (err) {
-      removeCategoryFormError.value = err || "Failed to delete category due to a server error.";
+      editCategoryFormError.value = err || "Failed to delete category due to a server error.";
   }
 };
 
 const handleRemovePrize = async () => {
-  removePrizeFormError.value = null;
-
-  const prizesInCategory = prizes.value.filter(
-      p => p.categoryId === currentRemovePrize_CategoryId.value)
-
-  let prizeToRemove = null;
-
-  const enteredNameIsEmpty = currentRemovePrize_Name.value === '';
-  const enteredPlacementIsEmpty = currentRemovePrize_Placement.value === '';
-
-  // both name and placement are populated
-  if (!enteredNameIsEmpty && !enteredPlacementIsEmpty) {
-    prizeToRemove = prizes.value.find(s => s.placement === Number(currentRemovePrize_Placement.value) &&
-        s.prizeName.toLocaleLowerCase() === currentRemovePrize_Name.value.toLocaleLowerCase());
-  }
-
-  // only name is populated
-  else if (!enteredNameIsEmpty) {
-    prizeToRemove = prizes.value.find(s => s.prizeName.toLocaleLowerCase() === currentRemovePrize_Name.value.toLocaleLowerCase());
-  }
-
-  // only placement is populated
-  else {
-    prizeToRemove = prizes.value.find(s => s.placement === Number(currentRemovePrize_Placement.value));
-  }
-
   try {
-    const idToDelete = prizeToRemove.id;
+    const idToDelete = currentEditPrize_Id.value;
     const deleteResp = await store.dispatch('deletePrize', idToDelete);
 
-    if (!deleteResp.success) {
-      console.warn(deleteResp.message)
+    if (!deleteResp.success)
       return;
-    }
 
     const index = prizes.value.findIndex((c) => c.id === idToDelete);
-    if(index !== -1){
+    if(index !== -1) {
       prizes.value.splice(index, 1);
     }
 
     const resPrizes = await store.getters.getPrizes;
     prizes.value = resPrizes === null ? [] : resPrizes;
 
-    currentRemovePrize_Name.value = "";
-    showRemovePrizeForm.value = false;
+    currentEditPrize_Id.value = null;
+    currentEditPrize_Name.value = null;
+    currentEditPrize_CategoryId.value = null;
+    currentEditPrize_Placement.value = null;
+    currentEditPrize_HandedOut.value = null;
+    currentEditPrize_EventId.value = null;
 
+    showEditPrizeForm.value = false;
   } catch (err) {
-    removePrizeFormError.value = err || "Failed to delete sponsor tier due to a server error.";
+    editPrizeFormError.value = err || "Failed to delete sponsor tier due to a server error.";
   }
 };
 
