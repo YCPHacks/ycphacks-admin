@@ -44,9 +44,9 @@
             <td colspan="4" class="text-center">No activities</td>
           </tr>
           <tr v-for="activity in sortedActivities" :key="activity.id">
-            <td>{{ activity.activityName }}</td>
-            <td>{{ activity.activityDate }}</td>
-            <td>{{ activity.activityDescription }}</td>
+            <td class="text-center">{{ activity.activityName }}</td>
+            <td class="text-center">{{ activity.activityDate }}</td>
+            <td class="text-center">{{ activity.activityDescription }}</td>
             <td class="text-center">
               <button class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
               <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
