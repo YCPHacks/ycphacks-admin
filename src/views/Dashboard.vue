@@ -69,7 +69,7 @@
         <p class="total-count">Total People: {{ participantTally.totalUsers }}</p>
         <p class="shirt-count">Order: <strong>{{ participantTally.totalShirts }} Shirts</strong></p>
         <div class="size-details">
-          <span 
+          <span
             v-for="(count, size) in participantTally.tally" 
             :key="size" 
             :class="{'text-danger fw-bold': size === 'N/A'}"
@@ -128,7 +128,6 @@
         {{ showAllActivities ? "View Less" : "View All" }}
       </a>
     </div>
-
   </div>
 </template>
 
