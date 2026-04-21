@@ -1,10 +1,12 @@
 <template>
   <div class="container mt-5">
-    <h2 class="mb-4 text-center">Hardware List</h2>
+    <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary add-hardware-btn">Import CSV File</button>
 
     <button @click="openAddModal" class="btn btn-primary add-hardware-btn">
       Add Hardware
     </button>
+    <h2 class="mb-4 text-center">Hardware List</h2>
+
 
     <div class="table-container shadow-lg rounded overflow-hidden mt-3">
       <div class="table-responsive">
@@ -164,6 +166,14 @@
       </div>
     </div>
 
+    <div v-if="showImportCSVHardwareModal" class="modal-overlay">
+      <div class="modal-content">
+        <input type="file" @change="handleFileUpload" accept=".csv" />
+        <button @click="uploadHardwareFile">Upload</button>
+        <button type="button" class="btn btn-secondary" @click="showImportCSVHardwareModal = false; resetForm()">Cancel</button>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -181,6 +191,7 @@ export default {
       isEditing: false,
       isUploading: false, // New state for better UX
       selectedFile: null,
+      showImportCSVHardwareModal: false,
 
       hardwareForm: {
         id: null,
@@ -206,6 +217,9 @@ export default {
       }
       // 2. Show the existing primary image URL if editing
       return this.currentPrimaryImageUrl;
+    },
+    isOscar() {
+      return store.getters.UserRole === 'oscar';
     }
   },
 
@@ -393,6 +407,25 @@ export default {
       this.selectedFile = null;
       this.currentPrimaryImageUrl = null;
     },
+
+    handleFileUpload(e) {
+      this.file = e.target.files[0];
+    },
+    async uploadHardwareFile() {
+      this.loading = true;
+
+      const result = await store.dispatch("importCSVHardware", this.file);
+
+      if (result.success) {
+        await this.fetchHardwareList(); // Refresh hardware list
+        this.showImportCSVHardwareModal = false; // Close modal
+        this.resetForm();
+      } else {
+        this.message = result.message;
+      }
+
+      this.loading = false;
+    }
   },
 };
 </script>
@@ -402,6 +435,7 @@ export default {
 .add-hardware-btn {
   float: right;
   margin-bottom: 10px;
+  margin-right: 20px;
 }
 
 .hardware-img {
@@ -445,4 +479,5 @@ export default {
   display: flex;
   justify-content: flex-end;
 }
+
 </style>

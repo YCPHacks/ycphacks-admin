@@ -5,35 +5,37 @@
   <div class="dashboard">
     <!-- Top Metrics Section -->
     <div class="metrics-container">
-      <div class="metric-box checked-users">
-        <!-- Update to be actual number of users checked in -->
+      <div class="metric-box bg-orange">
         <h3>{{checkedInCount}}</h3>
         <p>Checked In Users</p>
       </div>
-      <div class="metric-box rsvp-users">
-        <!-- Update to be actual number of users registered -->
+      <div class="metric-box bg-red">
         <h3>{{registeredParticipantCount}}</h3>
         <p>Registered Users</p>
       </div>
-      <div class="metric-box hardware-items">
-        <h3>700</h3>
-        <p>Hardware Items</p>
-      </div>
-      <div class="metric-box hardware-checkouts">
-        <h3>65</h3>
+      <div class="metric-box bg-purple">
+        <h3>{{reservedHardwareCount}}</h3>
         <p>Hardware Checkouts</p>
       </div>
-      <div class="metric-box listed-events">
-        <h3>25</h3>
-        <p>Listed Events</p>
+      <div class="metric-box bg-blue">
+        <h3>{{hardwareCount}}</h3>
+        <p>Hardware Items</p>
       </div>
-      <div class="metric-box listed-prizes">
-        <h3>{{prizeCount}}</h3>
+      <div class="metric-box bg-yellow">
+        <h3>{{categoriesCount}}</h3>
+        <p>Hack Categories</p>
+      </div>
+      <div class="metric-box bg-yellow-green">
+        <h3>{{prizesCount}}</h3>
         <p>Listed Prizes</p>
       </div>
-      <div class="metric-box listed-projects">
-        <h3>0</h3>
-        <p>Listed Projects</p>
+      <div class="metric-box bg-green">
+        <h3>{{teamsCount}}</h3>
+        <p>Teams Competing</p>
+      </div>
+      <div class="metric-box bg-cyan">
+        <h3>{{sponsorCount}}</h3>
+        <p>Listed Sponsors</p>
       </div>
     </div>
 
@@ -47,7 +49,7 @@
     <!-- Need to add logic for if the event applications are closed -> shouldn't show if closed -->
     <div class="tshirt-summary-row">
       
-      <div class="tshirt-box bg-all">
+      <div class="tshirt-box bg-red">
         <h3>👕 All Users</h3>
         <p class="total-count">Total People: {{ allTally.totalUsers }}</p>
         <p class="shirt-count">Order: <strong>{{ allTally.totalShirts }} Shirts</strong></p>
@@ -62,12 +64,12 @@
         </div>
       </div>
 
-      <div class="tshirt-box bg-participant">
+      <div class="tshirt-box bg-blue">
         <h3>🏃‍♂️ Participants</h3>
         <p class="total-count">Total People: {{ participantTally.totalUsers }}</p>
         <p class="shirt-count">Order: <strong>{{ participantTally.totalShirts }} Shirts</strong></p>
         <div class="size-details">
-          <span 
+          <span
             v-for="(count, size) in participantTally.tally" 
             :key="size" 
             :class="{'text-danger fw-bold': size === 'N/A'}"
@@ -77,7 +79,7 @@
         </div>
       </div>
 
-      <div class="tshirt-box bg-staff">
+      <div class="tshirt-box bg-green">
         <h3>🧑‍💻 Staff</h3>
         <p class="total-count">Total People: {{ staffTally.totalUsers }}</p>
         <p class="shirt-count">Order: <strong>{{ staffTally.totalShirts }} Shirts</strong></p>
@@ -126,7 +128,6 @@
         {{ showAllActivities ? "View Less" : "View All" }}
       </a>
     </div>
-
   </div>
 </template>
 
@@ -134,6 +135,8 @@
 import axios from "axios";
 import store from "../store/store.js";
 import {mapGetters} from "vuex";
+import hardwareService from "../services/hardwareService.js";
+import {getSponsors} from "@/services/sponsorService.js";
 
 const SIZE_ORDER = ['S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
 
@@ -143,23 +146,47 @@ export default {
     return {
       showAllActivities: false,
       users: [],
+      hardware: [],
+      teams: [],
+      sponsors: [],
       isLoading: false
     };
   },
   async mounted() {
-    await this.$store.dispatch('getActiveEvent');
-    console.log(store.getters.getEvent?.id);
-    await this.$store.dispatch('getPrizesForEvent', store.getters.getEvent?.id);
+    await this.$store.dispatch('getActiveEvent'); 
     await this.fetchUsers();
+    await this.fetchTeams();
     await this.fetchActivities();
+    await this.fetchHardware();
+    await this.fetchCategories();
+    await this.fetchPrizes();
+    await this.fetchSponsors();
   },
   computed: {
     ...mapGetters(['getActivities']),
     activeEventId(){
-      return store.getters.getEvent?.id;
+      return this.$store.state.event?.id;
     },
     checkedInCount(){
-      return this.users.filter(user => user.checkIn && user.role.toLowerCase() === 'participant').length;
+      return this.users.filter(user => user.checkIn && user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar').length;
+    },
+    sponsorCount() {
+      return this.sponsors.length;
+    },
+    hardwareCount() {
+      return this.hardware.length;
+    },
+    categoriesCount() {
+      return store.getters.getCategories.length;
+    },
+    prizesCount() {
+      return store.getters.getPrizes.length;
+    },
+    teamsCount() {
+      return this.teams.length;
+    },
+    reservedHardwareCount() {
+      return this.hardware.filter(hardware => hardware.isAvailable === true).length;
     },
     registeredParticipantCount(){
       return this.users.filter(user =>
@@ -192,10 +219,6 @@ export default {
       return this.showAllActivities
           ? this.sortedActivities.slice(0, 6) // show first 6
           : this.sortedActivities.slice(0, 3); // show first 3
-    },
-    prizeCount() {
-      console.log(store.getters.getPrizes);
-      return store.getters.getPrizes.length;
     }
   },
   methods: {
@@ -210,6 +233,30 @@ export default {
         this.users = response.data.data;
       } catch (error) {
         console.error("Error fetching users:", error);
+      }
+    },
+    async fetchTeams() {
+      const eventId = this.activeEventId;
+      try {
+        // 2. Use the new endpoint and append eventId as a query parameter
+        const response = await axios.get(`${store.state.apiBaseUrl}/teams/all?eventId=${eventId}`);
+        this.teams = response.data.data;
+      } catch(err) {
+        console.error("Error fetching teams: ", err.response?.data?.message || err.message);
+      }
+    },
+    async fetchSponsors() {
+      try {
+        const sponsorResp = await getSponsors();
+
+        if (!sponsorResp)
+          this.sponsors = 0;
+        console.log(sponsorResp)
+
+        this.sponsors = sponsorResp.data;
+      }
+      catch (err) {
+        console.log(err)
       }
     },
     async fetchActivities() {
@@ -233,23 +280,35 @@ export default {
         this.isLoading = false;
       }
     },
-    async fetchPrizes() {
+    async fetchHardware() {
       try {
-        const activeEvent = await store.dispatch('getActiveEvent');
-        let eventId = null;
+        const hardwareResp = await hardwareService.getHardware();
 
-
-        // Only fetch prizes if an event exists
-        if (activeEvent.success) {
-          eventId = store.getters.getEvent.id;
-        } else {
-          console.warn('No active event found');
+        if (!hardwareResp) {
+          console.log("Error fetching hardware");
           return;
         }
 
-        await store.dispatch('getPrizesForEvent', eventId);
-      } catch (err) {
-        console.error("Error fetching categories: ", err);
+        this.hardware = hardwareResp;
+      }
+      catch (err) {
+        console.log("Error fetching hardware")
+      }
+    },
+    async fetchCategories() {
+      try {
+        const categoriesResp = await this.$store.dispatch("getCategoriesForEvent", this.activeEventId);
+      }
+      catch (err) {
+        console.log("Error fetching categories")
+      }
+    },
+    async fetchPrizes() {
+      try {
+        const prizesResp = await this.$store.dispatch('getPrizesForEvent', this.activeEventId);
+      }
+      catch (err) {
+
       }
     },
     calculateTally(userList) {
@@ -319,35 +378,35 @@ export default {
   color: #777;
 }
 
-.checked-users {
-  background-color: #d4edda;
+.bg-cyan {
+  background-color: #c2f8f8;
 }
 
-.rsvp-users {
-  background-color: #fff3cd;
+.bg-blue {
+  background-color: #cbe1fa;
 }
 
-.hardware-checkouts {
-  background-color: #d1ecf1;
+.bg-green {
+  background-color: #c1ffcf;
 }
 
-.mentorship-requests {
-  background-color: #f8d7da;
+.bg-yellow-green {
+  background-color: #e0ffb5;
 }
 
-.listed-events {
-  background-color: #cce5ff;
+.bg-yellow {
+  background-color: #f8f5b3;
 }
 
-.listed-prizes {
-  background-color: #d4edda;
+.bg-orange {
+  background-color: #ffe7d8ff;
 }
 
-.hardware-items {
-  background-color: #fff3cd;
+.bg-purple {
+  background-color: #e6ddff;
 }
 
-.listed-projects {
+.bg-red {
   background-color: #f8d7da;
 }
 
@@ -422,7 +481,6 @@ export default {
 }
 
 .tshirt-box {
-  background-color: #ffffff;
   padding: 15px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

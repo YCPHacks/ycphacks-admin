@@ -348,6 +348,11 @@ export default createStore({
                     { headers: {'Content-Type': 'application/json'} }
                 );
 
+                const categories = this.getters.getCategories;
+                const updatedCategoryIndex = categories.value.findIndex((category) => category === response.updatedCategory)
+                categories.value[updatedCategoryIndex] = response.updatedCategory;
+                commit("updateCategories", categories)
+
                 return { success: true, updatedCategory: response.updatedCategory, message: data.message || "Category updated successfully" };
 
             } catch (error) {
@@ -356,7 +361,8 @@ export default createStore({
         },
         async getCategoriesForEvent({commit, state}, eventId){
             try{
-                const response = await axios.get(`${state.apiBaseUrl}/category/by-event/${eventId.value}`);
+                console.log("Passed event ID: ", eventId)
+                const response = await axios.get(`${state.apiBaseUrl}/category/by-event/${eventId}`);
                 commit("setCategories", response.data.categories);
 
                 return {
@@ -496,6 +502,49 @@ export default createStore({
             } catch (error) {
                 return { success: false, message: error.message || "Network or server error while deleting prize" };
             }
+        },
+        async importCSVActivities({ commit, state }, file) {
+            try {
+                if(!file)
+                    return { success: false, message: "Missing CSV File" };
+                console.log(file);
+                const csvText = await file.text();
+                const response = await axios.post(`${state.apiBaseUrl}/event/import`, csvText, {headers: {'Content-type':'text/csv'}});
+
+                const data = response.data;
+                if (!data) {
+                    return { success: false, message: data.message || "Failed to import CSV file", errors: data.errors };
+                }
+
+                commit("setActivities",
+                    [
+                        ...state.activities,
+                        ...data.parsedCSVData
+                    ]
+                );
+            } catch(error) {
+                return { success: false, message: error.message || "Network or server error while importing CSV file" };
+            }
+            return {success: true, message: "CSV was properly imported"};
+        },
+
+        async importCSVHardware({ state }, file) {
+            console.log(file);
+            try {
+                if(!file)
+                    return { success: false, message: "Missing CSV File" };
+                const csvText = await file.text();
+                console.log(csvText);
+                const response = await axios.post(`${state.apiBaseUrl}/hardware/import`, csvText, {headers: {'Content-type':'text/csv'}});
+
+                const data = response.data;
+                if (!data) {
+                    return { success: false, message: data.message || "Failed to import CSV file", errors: data.errors };
+                }
+            } catch(error) {
+                return { success: false, message: error.message || "Network or server error while importing CSV file" };
+            }
+            return {success: true, message: "CSV was properly imported"};
         }
     },
     getters: {
