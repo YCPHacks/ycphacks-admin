@@ -11,8 +11,6 @@
               Generating PDF, please wait...
             </div>
           </div>
-
-
             <!-- Add Team Button -->
             <div class="text-end mb-3">
                 <button class="btn btn-primary" @click="toggleAddForm">
@@ -353,7 +351,7 @@ export default{
     },
     computed:{
         activeEventId() {
-          return this.$store.state.event?.id;
+            return this.$store.getters.getEvent.id;
         },
         isOscar(){
             return this.$store.getters.UserRole === 'oscar';
@@ -583,7 +581,6 @@ export default{
             this.error = err.response?.data?.message || err.response?.data?.error || "Failed to export teams.";
             this.PDFloading = false;
           }
-
         },
         handleCancel() {
             // Reset form state and close modal
