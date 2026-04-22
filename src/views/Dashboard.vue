@@ -174,7 +174,10 @@ export default {
       return this.sponsors.length;
     },
     hardwareCount() {
-      return this.hardware.length;
+      let numHardware = 0;
+      for (let i=0; i<this.hardware.length; i++)
+        numHardware += this.hardware[i].items.length;
+      return numHardware;
     },
     categoriesCount() {
       return store.getters.getCategories.length;
@@ -186,7 +189,14 @@ export default {
       return this.teams.length;
     },
     reservedHardwareCount() {
-      return this.hardware.filter(hardware => hardware.isAvailable === true).length;
+      let numReservedHardware = 0;
+
+      for (let i=0; i<this.hardware.length; i++) {
+        for (let j=0; j<this.hardware[i].items.length; j++)
+          numReservedHardware += this.hardware[i].items[j].isUnavailable? 1:0;
+      }
+
+      return numReservedHardware;
     },
     registeredParticipantCount(){
       return this.users.filter(user =>
@@ -247,13 +257,13 @@ export default {
     },
     async fetchSponsors() {
       try {
-        const sponsorResp = await getSponsors();
+        const sponsorResp = await getSponsors(this.activeEventId);
 
         if (!sponsorResp)
           this.sponsors = 0;
-        console.log(sponsorResp)
+        console.log(sponsorResp.data.sponsors)
 
-        this.sponsors = sponsorResp.data;
+        this.sponsors = sponsorResp.data.sponsors;
       }
       catch (err) {
         console.log(err)
@@ -283,6 +293,7 @@ export default {
     async fetchHardware() {
       try {
         const hardwareResp = await hardwareService.getHardware();
+        console.log(hardwareResp)
 
         if (!hardwareResp) {
           console.log("Error fetching hardware");
