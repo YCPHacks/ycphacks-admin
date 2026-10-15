@@ -32,8 +32,8 @@
 
             <td>
               <img
-                  v-if="hardware.images && hardware.images.length > 0"
-                  :src="hardware.images[0].imageUrl"
+                  v-if="hardware.imageUrl"
+                  :src="hardware.imageUrl"
                   :alt="`${hardware.name} Image`"
                   class="hardware-img"
               />
@@ -89,6 +89,37 @@
                 required
             />
           </div>
+
+          <div class="form-group mt-2">
+  <label>Hardware Type (shared by multiple items)</label>
+
+  <select
+    v-model="hardwareForm.hardwareTypeId"
+    class="form-control"
+    :required="!newTypeName.trim()"
+    :disabled="!!newTypeName.trim()"
+  >
+    <option value="" disabled>Select type</option>
+    <option
+      v-for="type in hardwareTypes"
+      :key="type.id"
+      :value="type.id"
+    >
+      {{ type.name }}
+    </option>
+  </select>
+
+  <input
+    v-model="newTypeName"
+    class="form-control mt-2"
+    placeholder="Or enter a new type name"
+  />
+
+  <small>
+    Enter a new type name to create it, or select an existing type.
+    Uploading a new image changes the image for every item of this type.
+  </small>
+</div>
 
           <div class="form-group mt-2">
             <label for="hardwareSerial">Serial Number</label>
@@ -187,6 +218,8 @@ export default {
   data() {
     return {
       hardwareList: [],
+      hardwareTypes: [],
+      newTypeName: "",
       showHardwareModal: false,
       isEditing: false,
       isUploading: false, // New state for better UX
@@ -195,6 +228,7 @@ export default {
 
       hardwareForm: {
         id: null,
+        hardwareTypeId: "",
         hardwareName: "", // Updated field name to match backend/database structure
         serial: "",
         functional: true,
@@ -225,10 +259,15 @@ export default {
 
   created() {
     this.fetchHardwareList();
+    this.fetchTypes();
   },
 
   methods: {
     // --- Data Fetching ---
+    async fetchTypes() {
+      const { data } = await axios.get(`${store.state.apiBaseUrl}/hardware/types`);
+      this.hardwareTypes = data;
+    },
     async fetchHardwareList() {
       try {
         const response = await axios.get(
@@ -247,7 +286,8 @@ export default {
           description: item.description || "",
           whoHasId: item.whoHasId || "",
           // Access the images array returned by the repository's 'include'
-          images: item.images || [],
+          imageUrl: item.hardwareType?.imageUrl || null,
+          hardwareTypeId: item.hardwareTypeId,
         }));
 
       } catch (error) {
@@ -268,6 +308,7 @@ export default {
       // Map the data structure to the form structure
       this.hardwareForm = {
         id: hardware.id,
+        hardwareTypeId: hardware.hardwareTypeId,
         hardwareName: hardware.name, // Use the correct field name for the backend
         serial: hardware.serial,
         functional: hardware.functional,
@@ -276,11 +317,10 @@ export default {
       };
 
       // Set the existing image URL for preview
-      this.currentPrimaryImageUrl = hardware.images.length > 0
-          ? hardware.images[0].imageUrl
-          : null;
+      this.currentPrimaryImageUrl = hardware.imageUrl;
 
       this.selectedFile = null;
+      this.newTypeName = "";
       this.showHardwareModal = true;
     },
 
@@ -326,16 +366,28 @@ export default {
         // Step 1: Upload image if a new one was selected
         const newImageUrl = await this.uploadImageIfNeeded();
 
+        let typeId = this.hardwareForm.hardwareTypeId;
+        if (this.newTypeName.trim()) {
+          const { data } = await axios.post(`${store.state.apiBaseUrl}/hardware/types`, {
+            name: this.newTypeName.trim(), imageUrl: newImageUrl
+          });
+          typeId = data.id;
+        } else if (newImageUrl && typeId) {
+          await axios.put(`${store.state.apiBaseUrl}/hardware/types/${typeId}`, { imageUrl: newImageUrl });
+        }
+        if (!typeId) throw new Error('Select or create a hardware type');
+
         // 1. Construct the payload for the Hardware table
         const hardwarePayload = {
           // Use the correct field names for the backend: hardwareName, serial, functional, description
           hardwareName: this.hardwareForm.hardwareName,
+          hardwareTypeId: Number(typeId),
           serial: this.hardwareForm.serial,
           functional: this.hardwareForm.functional,
           description: this.hardwareForm.description,
           whoHasId:
               this.hardwareForm.whoHasId === "" ||
-              this.hardwareForm.whoHasId.toLowerCase() === "none" ? null : Number(this.hardwareForm.whoHasId),
+              String(this.hardwareForm.whoHasId).toLowerCase() === "none" ? null : Number(this.hardwareForm.whoHasId),
         };
 
         let hardwareResponse;
@@ -353,20 +405,7 @@ export default {
           hardwareResponse = await axios.post(`${store.state.apiBaseUrl}/hardware/add`, hardwarePayload);
         }
 
-        // Step 3: Link the new image to the created/updated hardware
-        if (newImageUrl) {
-          // Determine the hardware ID: use the ID from the form (edit) or the new ID from the response (create)
-          const hardwareId = this.isEditing ? this.hardwareForm.id : hardwareResponse.data.id;
-
-          // NOTE: This assumes your /hardware/add endpoint returns the ID of the new hardware item.
-
-          // Call the controller to save the URL to the HardwareImage table
-          await axios.post(`${store.state.apiBaseUrl}/hardware/image/add`, {
-            imageUrl: newImageUrl,
-            hardwareId: hardwareId
-          });
-        }
-
+        await this.fetchTypes();
         await this.fetchHardwareList();
         this.closeModal();
 
@@ -398,6 +437,7 @@ export default {
     resetForm() {
       this.hardwareForm = {
         id: null,
+        hardwareTypeId: "",
         hardwareName: "",
         serial: "",
         functional: true,
@@ -405,6 +445,7 @@ export default {
         whoHasId: ""
       };
       this.selectedFile = null;
+      this.newTypeName = "";
       this.currentPrimaryImageUrl = null;
     },
 
