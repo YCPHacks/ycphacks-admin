@@ -4,11 +4,13 @@
     <div :class="['main-content', { 'full-screen': isLoginPage }]">
       <router-view />
     </div>
+    <ToastContainer />
   </div>
 </template>
 
 <script>
 import SideNav from './components/SideNav.vue';
+import ToastContainer from './components/ToastContainer.vue';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
@@ -16,6 +18,7 @@ export default {
   name: "App",
   components: {
     SideNav,
+    ToastContainer,
   },
   setup() {
     const route = useRoute();

@@ -343,6 +343,7 @@
 import axios from "axios";
 import store from "../store/store.js";
 import { QrcodeStream } from 'vue-qrcode-reader'
+import { toast } from "@/utils/toast.js";
 
 
 const DIET_RESTRICTIONS = [
@@ -566,7 +567,7 @@ export default {
         await this.validateQR(cleanUserId);
       } catch (err){
         console.error("QR parse error:", err);
-        alert("Invalid QR Code");
+        toast.error("Invalid QR Code");
       } finally {
         // Resume scanning
           this.paused = false;
@@ -587,23 +588,23 @@ export default {
           const index = this.users.findIndex(u => u.id === updatedUser.id);
 
           if (index !== -1 && this.users[index].checkIn === true) {
-            alert("User is already checked in!");
+            toast.warning(`${updatedUser.firstName} ${updatedUser.lastName} is already checked in.`);
             return;
           }
 
-          alert("Check-in successful!");
+          toast.success(`${updatedUser.firstName} ${updatedUser.lastName} checked in!`);
 
           // Update only the checkIn property
           await this.toggleCheckIn(updatedUser);
           this.users[index].checkIn = updatedUser.checkIn;
 
         } else {
-          alert("Invalid QR Code");
+          toast.error("Invalid QR Code");
         }
 
       } catch (err) {
         console.error("Validation failed:", err);
-        alert("Server error validating QR");
+        toast.error("Server error validating QR");
       }
     },
 
@@ -657,9 +658,7 @@ export default {
 
       if (usersToExport.length === 0) {
         console.warn(`No users found for the selected role: ${role}.`);
-        // Show a simple error message to the user instead of just console.warn
-        // In a real app, you would use a notification system here.
-        alert(`Cannot export: No users found for the selected role filter (${role}).`);
+        toast.warning(`Cannot export: No users found for the selected role filter (${role}).`);
         return;
       }
 
@@ -668,7 +667,7 @@ export default {
 
       if (selectedFields.length === 0) {
         console.warn("Please select at least one data field (column) to export.");
-        alert("Please select at least one data field (column) to export.");
+        toast.warning("Please select at least one data field (column) to export.");
         return;
       }
 

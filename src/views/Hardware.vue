@@ -211,6 +211,7 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+import { toast } from "@/utils/toast.js";
 
 export default {
   name: "HardwareTab",
@@ -408,10 +409,11 @@ export default {
         await this.fetchTypes();
         await this.fetchHardwareList();
         this.closeModal();
+        toast.success("Hardware saved");
 
       } catch (error) {
         console.error("Error saving hardware:", error);
-        alert('Failed to save hardware. Check console for details.');
+        toast.error(`Failed to save hardware: ${error.response?.data?.message || error.message}`);
       }
     },
 
@@ -424,8 +426,10 @@ export default {
         // but that requires a separate backend endpoint.
         await axios.delete(`${store.state.apiBaseUrl}/hardware/delete/${id}`);
         await this.fetchHardwareList();
+        toast.success("Hardware deleted");
       } catch (error) {
         console.error("Error deleting hardware:", error);
+        toast.error(`Failed to delete hardware: ${error.response?.data?.message || error.message}`);
       }
     },
 
@@ -461,8 +465,9 @@ export default {
         await this.fetchHardwareList(); // Refresh hardware list
         this.showImportCSVHardwareModal = false; // Close modal
         this.resetForm();
+        toast.success("Hardware imported");
       } else {
-        this.message = result.message;
+        toast.error(result.message);
       }
 
       this.loading = false;

@@ -3,8 +3,12 @@ import axios from "axios";
 import router from '../router/index.js';
 import UserAdapter from "./UserAdapter.js";
 import { formatDateToEST } from "@/utils/formatDate.js";
+import toasts from './toasts.js';
 
 export default createStore({
+    modules: {
+        toasts
+    },
     state: {
         user: {},
         sponsors: [],
