@@ -123,25 +123,84 @@
                     <div class="mb-4">
                         <label class="form-label">Initial Participants (Select {{ MIN_PARTICIPANTS }} or more) *</label>
                         <div v-if="loading && showAddForm" class="text-info fst-italic">Loading participants...</div>
-                        <div v-else-if="checkedInUnassignedUsers.length > 0">
-                            <select 
-                                v-model="selectedParticipantsIds" 
-                                multiple 
-                                class="form-control"
-                                required
-                                :size="Math.min(10, checkedInUnassignedUsers.length + 1)"
+    
+                        <div v-else-if="checkedInUnassignedUsers.length > 0" class="dropdown multiselect-dropdown" ref="participantDropdown">
+        
+                            <!-- Dropdown Trigger Box (Displays Badges or Placeholder) -->
+                            <div 
+                                class="form-select d-flex align-items-center justify-content-between style-pointer py-2"
+                                :class="{ 'show': isParticipantDropdownOpen }"
+                                @click="toggleParticipantDropdown"
                             >
-                                <option 
-                                    v-for="p in checkedInUnassignedUsers" 
-                                    :key="p.id" :value="p.id" >
-                                    {{ formatParticipants(p) }}
-                                </option>
-                            </select>
-                            <div class="form-text text-muted">Hold Ctrl (Cmd on Mac) to select multiple participants.</div>
+                                <span v-if="selectedParticipantsIds.length === 0" class="text-muted">
+                                    -- Select Participants --
+                                </span>
+                                <div v-else class="d-flex flex-wrap gap-1 pe-2">
+                                    <span 
+                                        v-for="id in selectedParticipantsIds" 
+                                        :key="id" 
+                                        class="badge bg-primary d-inline-flex align-items-center gap-1 py-1 px-2"
+                                        @click.stop
+                                    >
+                                        {{ getParticipantName(id) }}
+                                        <button 
+                                            type="button" 
+                                            class="btn-close btn-close-white ms-1" 
+                                            style="font-size: 0.55rem;" 
+                                            @click="toggleParticipantSelection(id)"
+                                        ></button>
+                                    </span>
+                                </div>
+                             </div>
+
+                            <!-- Dropdown Menu / Overlay -->
+                            <div 
+                                v-if="isParticipantDropdownOpen" 
+                                class="dropdown-menu show w-100 p-2 shadow-lg"
+                                style="max-height: 260px; overflow-y: auto;"
+                            >
+                                <!-- Search Input Bar Inside Dropdown -->
+                                <div class="mb-2" @click.stop>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input 
+                                            type="text" 
+                                            v-model="participantSearchQuery" 
+                                            class="form-control" 
+                                            placeholder="Search name or email..." 
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- Checkboxes List -->
+                                <div 
+                                    v-for="p in filteredUnassignedUsers" 
+                                    :key="p.id" 
+                                    class="form-check dropdown-item-row p-2 rounded mb-1"
+                                    @click.stop="toggleParticipantSelection(p.id)"
+                                >
+                                    <input 
+                                        class="form-check-input ms-0 me-2" 
+                                        type="checkbox" 
+                                        :value="p.id" 
+                                        :checked="selectedParticipantsIds.includes(p.id)"
+                                        @click.stop="toggleParticipantSelection(p.id)"
+                                    />
+                                    <label class="form-check-label text-dark mb-0 style-pointer">
+                                        {{ formatParticipants(p) }}
+                                        <span v-if="p.email" class="text-muted small">({{ p.email }})</span>
+                                    </label>
+                                </div>
+
+                                <div v-if="filteredUnassignedUsers.length === 0" class="text-muted p-2 text-center small">
+                                    No participants found matching "{{ participantSearchQuery }}"
+                                </div>
+                            </div>
+                            <div class="form-text text-muted mt-1">Click the dropdown to search and select team members.</div>
                         </div>
-                        
+    
                         <p v-else class="text-muted small p-2 bg-light rounded">
-                            No unassigned participants available to form a new team.
+                         No unassigned participants available to form a new team.
                         </p>
                     </div>
                     
@@ -338,6 +397,8 @@ export default{
                 eventId: 1, // Placeholder
             },
             selectedParticipantsIds: [], // Participants currently selected in the form
+            participantSearchQuery: '', // Search text for participants multiselect
+            isParticipantDropdownOpen: false, // Controls dropdown toggle state
             loading: false,
             PDFloading: false,
             error: null, // Error message for the Add Form
@@ -347,9 +408,13 @@ export default{
         }
     },
     async mounted() {
+        document.addEventListener('click', this.handleClickOutside);
         await this.$store.dispatch('getActiveEvent'); 
         this.fetchTeams();
         this.fetchUnassignedUsers();
+    },
+    beforeUnmount() {
+        document.removeEventListener('click', this.handleClickOutside); // Added
     },
     computed:{
         activeEventId() {
@@ -376,6 +441,17 @@ export default{
         checkedInUnassignedUsers(){
             // Retained for use in the Add Team modal
             return this.unassignedUsers;
+        },
+        filteredUnassignedUsers() {
+            if (!this.participantSearchQuery.trim()) {
+                return this.checkedInUnassignedUsers;
+            }
+            const q = this.participantSearchQuery.toLowerCase();
+            return this.checkedInUnassignedUsers.filter(p => {
+                const name = this.formatParticipants(p).toLowerCase();
+                const email = (p.email || '').toLowerCase();
+                return name.includes(q) || email.includes(q);
+            });
         },
         isTeamMinMet() {
             return this.selectedParticipantsIds.length >= this.MIN_PARTICIPANTS;
@@ -411,6 +487,27 @@ export default{
         this.fetchUnassignedUsers();
     },
     methods: {
+        toggleParticipantDropdown() {
+            this.isParticipantDropdownOpen = !this.isParticipantDropdownOpen;
+        },
+        handleClickOutside(event) {
+            const dropdown = this.$refs.participantDropdown;
+            if (dropdown && !dropdown.contains(event.target)) {
+                this.isParticipantDropdownOpen = false;
+            }
+        },
+        toggleParticipantSelection(id) {
+            const index = this.selectedParticipantsIds.indexOf(id);
+            if (index > -1) {
+                this.selectedParticipantsIds.splice(index, 1);
+            } else {
+                this.selectedParticipantsIds.push(id);
+            }
+        },
+        getParticipantName(id) {
+            const participant = this.checkedInUnassignedUsers.find(p => p.id === id);
+            return participant ? this.formatParticipants(participant) : `ID: ${id}`;
+        },
         async fetchTeams() {
             const eventId = this.activeEventId;
             try {
@@ -596,6 +693,8 @@ export default{
                 eventId: 1,
             };
             this.selectedParticipantsIds = [];
+            this.participantSearchQuery = '';
+            this.isParticipantDropdownOpen = false;
             this.loading = false;
             this.showAddForm = false;
             this.addFormError = null; 
@@ -818,5 +917,30 @@ export default{
   overflow-y: auto;
 
   padding-bottom: 20px;
+}
+
+.multiselect-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.multiselect-dropdown .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1060;
+}
+
+.dropdown-item-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.dropdown-item-row:hover {
+  background-color: #f1f3f5;
+}
+
+.style-pointer {
+  cursor: pointer;
 }
 </style>
