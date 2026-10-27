@@ -79,10 +79,6 @@
                     <h5>Add New Team</h5>
                 </header>
 
-                <!-- Error/Success Alert Structure -->
-                <div v-if="error || success" :class="['alert p-2 mb-3', error ? 'alert-danger' : 'alert-success']" role="alert">
-                    <i class="bi bi-info-circle-fill"></i> {{ error || success }}
-                </div>
 
                 <form @submit.prevent="handleAddTeam">
                     <div v-if="addFormError" class="alert alert-danger p-2 mb-3">
@@ -220,9 +216,6 @@
                 </header>
                 
                 <div class="modal-body">
-                    <div v-if="error || success" :class="['alert p-2 mb-3', error ? 'alert-danger' : 'alert-success']" role="alert">
-                        <i class="bi bi-info-circle-fill"></i> {{ error || success }}
-                    </div>
                     
                     <form @submit.prevent="handleUpdateTeam" id="editTeamForm"> 
                         <div v-if="editFormError" class="alert alert-danger p-2 mb-3">
@@ -304,6 +297,7 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+import { toast } from "@/utils/toast.js";
 const API_BASE_URL = `${store.state.apiBaseUrl}`;
 
 export default{
@@ -340,8 +334,6 @@ export default{
             selectedParticipantsIds: [], // Participants currently selected in the form
             loading: false,
             PDFloading: false,
-            error: null, // Error message for the Add Form
-            success: null, // Success message for the Add Form
             MIN_PARTICIPANTS: 1,
             VISUAL_SLOTS: 4,
         }
@@ -489,8 +481,6 @@ export default{
             this.unassignedUsers = this.unassignedUsers.filter(p => p.id !== bannedUserId)
         },
         openEditTeamForm(item) {
-          this.error = null;
-          this.success = null;
           this.editFormError = null;
 
           this.showAddForm = false;
@@ -510,8 +500,6 @@ export default{
             this.editTeamId = null;
             this.editFormError = null;
             this.loading = false;
-            this.error = null;
-            this.success = null;
         },
 
         async handleUpdateTeam(){
@@ -532,15 +520,12 @@ export default{
                 };
 
                 const response = await axios.put(`${API_BASE_URL}/teams/${teamId}`, payload);
-                this.success = response.data.message || 'Team updated successfully!';
+                toast.success(response.data.message || 'Team updated successfully!');
 
                 await this.fetchTeams();
                 await this.fetchUnassignedUsers();
 
-                setTimeout(() => {
-                    this.cancelEdit();
-                    this.success = null;
-                }, 1500);
+                this.cancelEdit();
             }catch(err){
                 this.editFormError = err.response?.data?.message || "Failed to update team. Please check the form and try again.";
             }
@@ -580,7 +565,7 @@ export default{
 
           } catch(err) {
             console.error("Error exporting team: ", err);
-            this.error = err.response?.data?.message || err.response?.data?.error || "Failed to export teams.";
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to export teams.");
             this.PDFloading = false;
           }
 
@@ -602,8 +587,6 @@ export default{
         },
         async handleAddTeam() {
             this.addFormError = null;
-            this.error = null;
-            this.success = null;
             
             // Client-side validation: Check minimum participants
             if (!this.isTeamMinMet) {
@@ -624,16 +607,17 @@ export default{
                 // --- Actual API Call (Uncomment when API is ready) ---
                 const response = await axios.post(`${API_BASE_URL}/teams/create`, teamPayload);
                 
-                this.success = `Team '${this.formData.teamName}' successfully registered and ${teamPayload.participantIds.length} members assigned!`;
-                
+                toast.success(`Team '${this.formData.teamName}' successfully registered and ${teamPayload.participantIds.length} members assigned!`);
+
                 // Re-fetch the data to update the lists
                 this.fetchTeams();
                 this.fetchUnassignedUsers();
 
+                this.handleCancel();
 
             } catch (err) {
                 console.error("Error adding team: ", err);
-                this.error = err.response?.data?.message || err.response?.data?.error || "Failed to register team. Please check the form and try again.";
+                this.addFormError = err.response?.data?.message || err.response?.data?.error || "Failed to register team. Please check the form and try again.";
             } finally {
                 this.loading = false;
             }
@@ -666,17 +650,14 @@ export default{
                 // API call to delete the team using the stored editTeamId
                 const response = await axios.delete(`${API_BASE_URL}/teams/${this.teamIdForDeletion}`);
                 
-                this.success = response.data.message || `Team '${this.editFormData.teamName}' successfully deleted.`;
-                
+                toast.success(response.data.message || `Team '${this.editFormData.teamName}' successfully deleted.`);
+
                 // Cleanup: Re-fetch the lists and close all modals
                 await this.fetchTeams();
                 await this.fetchUnassignedUsers();
-                
-                setTimeout(() => {
-                    this.cancelEdit(); // Clears all edit-related state
-                    this.cancelRemove(); // Clears remove-related state
-                    this.success = null;
-                }, 1500);
+
+                this.cancelEdit(); // Clears all edit-related state
+                this.cancelRemove(); // Clears remove-related state
 
             } catch (err) {
                 console.error("Error removing team:", err);

@@ -181,6 +181,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useStore } from 'vuex';
+import { toast } from '@/utils/toast.js';
 
 const store = useStore();
 
@@ -441,6 +442,7 @@ const handleAddCategory = async () => {
     categories.value = resCategories === null ? [] : resCategories;
 
     showAddCategoryForm.value = false;
+    toast.success("Category added");
   }catch (err){
     addCategoryFormError.value = err || "Failed to add sponsor tier.";
   }
@@ -463,6 +465,7 @@ const handleAddPrize = async () => {
     prizes.value = resPrizes === null ? [] : resPrizes;
 
     showAddPrizeForm.value = false;
+    toast.success("Prize added");
   }catch (err){
     addPrizeFormError.value = err || "Failed to add sponsor tier.";
   }
@@ -483,6 +486,7 @@ const handleEditCategory = async (categoryId) => {
       await fetchCategories();
 
       showEditCategoryForm.value = false;
+      toast.success("Category updated");
   }catch (err){
       editCategoryFormError.value = err || "Failed to update category.";
   }
@@ -506,6 +510,7 @@ const handleEditPrize = async () => {
     await fetchPrizes();
 
     showEditPrizeForm.value = false;
+    toast.success("Prize updated");
   }catch (err){
     editPrizeFormError.value = err || "Failed to update prize.";
   }
@@ -517,8 +522,10 @@ const handleRemoveCategory = async () => {
     const idToDelete = currentEditCategory_Id.value;
     const deleteResp = await store.dispatch('deleteCategory', idToDelete);
 
-    if (!deleteResp.success)
+    if (!deleteResp.success) {
+      toast.error(deleteResp.message);
       return;
+    }
 
     const index = categories.value.findIndex((c) => c.id === idToDelete);
     if(index !== -1){
@@ -534,6 +541,7 @@ const handleRemoveCategory = async () => {
     currentEditCategory_EventId.value = null;
 
     showEditCategoryForm.value = false;
+    toast.success("Category deleted");
 
   } catch (err) {
       editCategoryFormError.value = err || "Failed to delete category due to a server error.";
@@ -545,8 +553,10 @@ const handleRemovePrize = async () => {
     const idToDelete = currentEditPrize_Id.value;
     const deleteResp = await store.dispatch('deletePrize', idToDelete);
 
-    if (!deleteResp.success)
+    if (!deleteResp.success) {
+      toast.error(deleteResp.message);
       return;
+    }
 
     const index = prizes.value.findIndex((c) => c.id === idToDelete);
     if(index !== -1) {
@@ -564,6 +574,7 @@ const handleRemovePrize = async () => {
     currentEditPrize_EventId.value = null;
 
     showEditPrizeForm.value = false;
+    toast.success("Prize deleted");
   } catch (err) {
     editPrizeFormError.value = err || "Failed to delete sponsor tier due to a server error.";
   }

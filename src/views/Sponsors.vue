@@ -370,6 +370,7 @@ import { ref, onMounted, computed } from "vue";
 import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, updateSponsorTier, removeSponsorTier, getActiveEventObject } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
 import axios from "axios";
+import { toast } from "@/utils/toast.js";
 
 // List of sponsors
 const sponsors = ref([]);
@@ -863,6 +864,7 @@ const handleAddSponsor = async () => {
     addFile.value = null;
     showAddForm.value = false;
     selectedImage.value = false;
+    toast.success("Sponsor added");
 
   } catch(err) {
     // console.error("Error adding sponsor: ", err);
@@ -895,6 +897,7 @@ const removeSponsor = async () => {
   
     removeName.value = "";
     showRemoveForm.value = false;
+    toast.success("Sponsor removed");
   } catch (err) {
       const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor due to a network or server error.";
       removeFormError.value = errorMessage;
@@ -936,6 +939,7 @@ const handleAddTier = async () => {
     tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
 
     showAddTierForm.value = false;
+    toast.success("Tier added");
   }catch (err){
     const errorMessage = err.response?.data?.error || "Failed to add sponsor tier.";
     addTierFormError.value = errorMessage;
@@ -985,6 +989,7 @@ const handleUpdateTier = async () => {
       await fetchSponsorsAndTiers();
 
       showEditTierForm.value = false;
+      toast.success("Tier updated");
   }catch (err){
       const errorMessage = err.response?.data?.error || "Failed to update sponsor tier.";
       editTierFormError.value = errorMessage;
@@ -1016,6 +1021,7 @@ const removeSponsorTiers = async () => {
   
     removeTierName.value = "";
     showRemoveTierForm.value = false;
+    toast.success("Tier removed");
   } catch (err) {
     const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor tier due to a server error.";
     removeTierFormError.value = errorMessage;
@@ -1108,6 +1114,7 @@ const handleUpdateSponsor = async () => {
       editId.value = null;
       editFile.value = null;
     selectedImage.value = false;
+    toast.success("Sponsor updated");
   }catch (err){
     // console.error("Error updating sponsor: ", err);
     const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during update.";
