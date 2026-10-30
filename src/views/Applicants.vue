@@ -588,11 +588,11 @@ export default {
           const index = this.users.findIndex(u => u.id === updatedUser.id);
 
           if (index !== -1 && this.users[index].checkIn === true) {
-            toast.warning(`${updatedUser.firstName} ${updatedUser.lastName} is already checked in.`);
+            toast.always.warning(`${updatedUser.firstName} ${updatedUser.lastName} is already checked in.`);
             return;
           }
 
-          toast.success(`${updatedUser.firstName} ${updatedUser.lastName} checked in!`);
+          toast.always.success(`${updatedUser.firstName} ${updatedUser.lastName} checked in!`);
 
           // Update only the checkIn property
           await this.toggleCheckIn(updatedUser);
@@ -658,7 +658,7 @@ export default {
 
       if (usersToExport.length === 0) {
         console.warn(`No users found for the selected role: ${role}.`);
-        toast.warning(`Cannot export: No users found for the selected role filter (${role}).`);
+        toast.always.warning(`Cannot export: No users found for the selected role filter (${role}).`);
         return;
       }
 
@@ -667,7 +667,7 @@ export default {
 
       if (selectedFields.length === 0) {
         console.warn("Please select at least one data field (column) to export.");
-        toast.warning("Please select at least one data field (column) to export.");
+        toast.always.warning("Please select at least one data field (column) to export.");
         return;
       }
 

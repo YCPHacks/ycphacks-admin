@@ -22,7 +22,12 @@ export default {
         }
     },
     actions: {
-        notify({ commit, dispatch, state }, { type = 'info', message, timeout }) {
+        notify({ commit, dispatch, state, rootState }, { type = 'info', message, timeout, always = false }) {
+            // Users can turn toasts off, but errors and `always` toasts still show
+            if (!always && type !== 'error' && rootState.user?.notificationPreference_toast === false) {
+                return null;
+            }
+
             const id = nextId++;
             commit('ADD_TOAST', { id, type, message });
 

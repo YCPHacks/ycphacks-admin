@@ -6,5 +6,6 @@ export default class UserAdapter {
         this.email = adapter.email || "tinyhouse@gmail.com";
         this.role = adapter.role || 2;
         this.token = adapter.token || "123";
+        this.notificationPreference_toast = adapter.notificationPreference_toast ?? true;
     }
 }
