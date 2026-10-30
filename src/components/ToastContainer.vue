@@ -47,7 +47,8 @@ export default {
 <style scoped>
 .toast-stack {
   position: fixed;
-  top: 1rem;
+  /* Sit below the 60px navbar */
+  top: calc(60px + 1rem);
   right: 1rem;
   /* Above every overlay, including the QR scanner modal in Applicants (9999) */
   z-index: 10001;
