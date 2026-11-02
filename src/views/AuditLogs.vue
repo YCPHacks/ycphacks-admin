@@ -1,8 +1,9 @@
 <template>
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Audit Logs</h2>
-    <!-- Create Activity Button -->
-    <button @click="showSearchAuditLogsModal = true" class="btn btn-primary create-activity-btn">Search Filters</button>
+    <div class="page-actions">
+      <button @click="showSearchAuditLogsModal = true" class="btn btn-primary">Search Filters</button>
+    </div>
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
@@ -11,7 +12,7 @@
         <div class="mb-4">
           <input type="text" v-model="searchQuery" class="form-control" placeholder="Search by action or table name..." />
         </div>
-        <table class="table table-striped table-hover">
+        <table class="table table-cards table-striped table-hover">
           <thead class="thead-light">
           <tr>
             <th class="text-center sortable" @click="sortBy('createdAt')">
@@ -43,12 +44,12 @@
             <td colspan="6" class="text-center">No audit logs</td>
           </tr>
           <tr v-for="log in sortedAuditLogs" :key="log.id" class="text-center">
-            <td>{{ formatDateToEST(log.createdAt) }}</td>
-            <td>{{ toTitleCase(log.action) }}</td>
-            <td>{{ log.tableName }}</td>
-            <td>{{ log.recordId }}</td>
-            <td>{{ log.userId ? log.userId : 'N/A' }}</td>
-            <td class="text-center">
+            <td data-label="Date / Time">{{ formatDateToEST(log.createdAt) }}</td>
+            <td data-label="Action">{{ toTitleCase(log.action) }}</td>
+            <td data-label="Table">{{ log.tableName }}</td>
+            <td data-label="Record ID">{{ log.recordId }}</td>
+            <td data-label="User ID">{{ log.userId ? log.userId : 'N/A' }}</td>
+            <td class="text-center card-actions">
               <button @click="openViewDetailsModal(log)" class="btn btn-info btn-sm me-2">View</button>
             </td>
           </tr>
@@ -56,7 +57,7 @@
         </table>
       </div>
     </div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
       <!-- Page size dropdown -->
       <div>
         <b-form-select
@@ -378,11 +379,6 @@ export default {
   position: relative;
 }
 
-.create-activity-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-}
 
 .table-container {
   border-radius: 0.75rem;

@@ -7,11 +7,13 @@
         </b-dropdown>
       </span>
     </h2>
-    <!-- Import CSV Activities Button -->
-    <button v-if="isOscar" @click="showImportCSVActivityModal = true" class="btn btn-primary import-activity-btn">Import CSV File</button>
+    <div class="page-actions">
+      <!-- Import CSV Activities Button -->
+      <button v-if="isOscar" @click="showImportCSVActivityModal = true" class="btn btn-primary">Import CSV File</button>
 
-    <!-- Create Activity Button -->
-    <button @click="showCreateActivityModal = true" class="btn btn-primary create-activity-btn">Create Activity</button>
+      <!-- Create Activity Button -->
+      <button @click="showCreateActivityModal = true" class="btn btn-primary">Create Activity</button>
+    </div>
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
@@ -20,7 +22,7 @@
         <div class="mb-4">
           <input type="text" v-model="searchQuery" class="form-control" placeholder="Search by activity name or description..." />
         </div>
-        <table class="table table-striped table-hover">
+        <table class="table table-cards table-striped table-hover">
           <thead class="thead-light">
           <tr>
             <th class="text-left sortable" @click="sortBy('activityName')">
@@ -44,10 +46,10 @@
             <td colspan="4" class="text-center">No activities</td>
           </tr>
           <tr v-for="activity in sortedActivities" :key="activity.id">
-            <td class="text-center">{{ activity.activityName }}</td>
-            <td class="text-center">{{ activity.activityDate }}</td>
-            <td class="text-center">{{ activity.activityDescription }}</td>
-            <td class="text-center">
+            <td data-label="Activity" class="text-center">{{ activity.activityName }}</td>
+            <td data-label="Date" class="text-center">{{ activity.activityDate }}</td>
+            <td data-label="Description" class="text-center">{{ activity.activityDescription }}</td>
+            <td class="text-center card-actions">
               <button class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
               <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
             </td>
@@ -371,17 +373,7 @@ export default {
   position: relative;
 }
 
-.create-activity-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-}
 
-.import-activity-btn {
-  position: absolute;
-  top: 20px;
-  right: 150px;
-}
 
 .table-container {
   border-radius: 0.75rem;
