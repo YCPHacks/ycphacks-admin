@@ -9,7 +9,7 @@
     <router-link to="/hardware">Hardware</router-link>
     <router-link to="/sponsors">Sponsors</router-link>
     <router-link to="/prizes">Prizes</router-link>
-    <router-link to="/audit-logs" v-if="UserRole() === 'oscar'">Audit Logs</router-link>
+    <router-link to="/audit-logs" v-if="getPermission().includes('oscar')">Audit Logs</router-link>
     <div class="spacer"></div>
     <button @click="handleLogout" class="logout">Logout</button>
   </div>
@@ -22,7 +22,7 @@ export default {
   name: "SideNav",
   methods: {
     ...mapActions(['logout']),
-    ...mapGetters(['UserRole']),
+    ...mapGetters(['getPermission']),
     handleLogout() {
       this.logout().then(() => {
         this.$router.push('/login');

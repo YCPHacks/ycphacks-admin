@@ -39,14 +39,16 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from, next) => {
-    const userRole = store.state.user?.role;
-    const hasPermissions = userRole === 'staff' || userRole === 'oscar';
-
     let isAuthenticated = !!store.state.user;
     if (!isAuthenticated) {
         const result = await store.dispatch('validateWithToken');
         isAuthenticated = result.success;
     }
+
+    const permissions = Array.isArray(store.state.permission)
+        ? store.state.permission
+        : [];
+    const hasPermissions = permissions.some(p => ['staff', 'oscar'].includes(p));
 
     // Allow routing to login if NOT authenticated
     if (to.path === '/login') {
@@ -63,10 +65,8 @@ router.beforeEach(async (to, from, next) => {
     }
 
     // For routes that require oscar-level role
-    if (to.meta.requiresOscar) {
-        if (userRole !== 'oscar') {
+    if (to.meta.requiresOscar && !permissions.includes('oscar')) {
             return next("/");
-        }
     }
 
     next(); // allow route

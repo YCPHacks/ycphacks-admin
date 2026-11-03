@@ -7,6 +7,7 @@ import { formatDateToEST } from "@/utils/formatDate.js";
 export default createStore({
     state: {
         user: {},
+        permission: [],
         sponsors: [],
         categories: [],
         prizes: [],
@@ -21,6 +22,9 @@ export default createStore({
             state.user = user;
             // if the user has been set it's assumed to be safe to navigate to the dashboard
             router.push('/')
+        },
+        setPermission(state, permission) {
+            state.permission = permission;
         },
         clearUser(state){
             state.user = null
@@ -71,7 +75,8 @@ export default createStore({
             try {
                 const loginData = {
                     email: formData.email,
-                    password: formData.password
+                    password: formData.password,
+                    eventId: formData.eventId
                 }
 
                 const response = await axios.post(`${state.apiBaseUrl}/user/admin-login`, loginData, {
@@ -81,10 +86,12 @@ export default createStore({
                 });
 
                 const data = response.data;
+                console.log(data);
+                commit("setPermission", response.data.permissionList);
                 const user = new UserAdapter(data.data)
                 commit("setUser", user);
 
-                document.cookie = `token=${user.token}; path=/;`;
+                document.cookie = `token=${data.data.token}; path=/;`;
                 return { success: true, message: data.message }
             } catch (error) {
                 return { success: false, message: error.response?.data?.message || "Login Failed" };
@@ -549,7 +556,7 @@ export default createStore({
     },
     getters: {
         isAuthenticated: (state) => !!state.user,
-        UserRole: (state) => state.user?.role || null,
+        getPermission: (state) => state.permission || null,
         allSponsors: (state) => state.sponsors,
         getActivities: (state) => state.activities,
         getCategories: (state) => state.categories,
