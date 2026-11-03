@@ -2,30 +2,30 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Our Sponsors</h2>
 
-    <div class="d-flex justify-content-end gap-2 mb-3">
+    <div class="page-actions">
       <!-- Add Sponsor Tier Button -->
-      <div v-if="isOscar" class="text-end mb-3">
+      <div v-if="isOscar">
         <button class="btn btn-primary" @click="toggleAddTierForm">
           Add Sponsor Tier
         </button>
       </div>
 
       <!-- Remove Sponsor Tier Button -->
-      <div v-if="isOscar" class="text-end mb-3">
+      <div v-if="isOscar">
         <button class="btn btn-primary" @click="toggleRemoveTierForm">
           Remove Sponsor Tier
         </button>
       </div>
 
       <!-- Add Sponsor Button -->
-      <div class="text-end mb-3">
+      <div>
         <button class="btn btn-primary" @click="toggleAddForm">
           Add Sponsor
         </button>
       </div>
 
       <!-- Remove Sponsor Button -->
-      <div v-if="isOscar" class="text-end mb-3">
+      <div v-if="isOscar">
         <button class="btn btn-primary" @click="toggleRemoveForm">
           Remove Sponsor
         </button>
@@ -302,15 +302,19 @@
                   <tr>
                     <th class="text-left">Tier Name</th>
                     <th class="text-left">Donation Range</th>
+                    <th v-if="isOscar" class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="tierRanges.length === 0">
-                    <td colspan="2" class="alert alert-info p-2 text-center">No tiers defined</td>
+                    <td colspan="3" class="alert alert-info p-2 text-center">No tiers defined</td>
                   </tr>
-                  <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index" @click="openEditTierForm(tierData)" style="cursor: pointer;">
+                  <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index">
                     <td class="text-center">{{ tierData.tier }}</td>
                     <td class="text-center">{{ tierData.range }}</td>
+                    <td v-if="isOscar" class="text-center">
+                      <button class="btn btn-sm btn-warning" @click="openEditTierForm(tierData)">Edit</button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -323,38 +327,41 @@
         
         <div class="table-container shadow-lg rounded overflow-hidden">
           <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-cards table-striped table-hover">
               <thead class="thead-light">
                 <tr>
                   <th class="text-left">Sponsor Name</th>
                   <th class="text-left">Sponsor Tier</th>
                   <th class="text-left">Website</th>
+                  <th class="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="sponsors.length === 0">
-                  <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
+                  <td colspan="4" class="alert alert-info p-2 text-center">No sponsors available</td>
                 </tr>
                 <tr 
                   v-for="(sponsor, index) in sponsors" 
-                  :key="sponsor.id || index" 
-                  @click="openEditForm(index)" 
-                  style="cursor: pointer"
+                  :key="sponsor.id || index"
                   >
                   
                   <td 
-                    class="text-center"
+                    class="text-center" data-label="Sponsor Name"
                     
                     :class="{ 'highlight-name-needs-update': isSponsorTierInvalid(sponsor, tiers) }"
                   >
                     {{ sponsor.name }}
                   </td>
                   
-                  <td class="text-center">
+                  <td data-label="Sponsor Tier" class="text-center">
                     {{ sponsor.tier }}
                   </td>
                   
-                  <td class="text-left">{{ sponsor.website }}</td>
+                  <td data-label="Website" class="text-left">{{ sponsor.website }}</td>
+
+                  <td class="text-center card-actions">
+                    <button class="btn btn-sm btn-warning" @click="openEditForm(index)">Edit</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -370,6 +377,7 @@ import { ref, onMounted, computed } from "vue";
 import { getSponsors, addSponsor, updateEventSponsor, deleteSponsor, getSponsorTiers, addSponsorTier, updateSponsorTier, removeSponsorTier, getActiveEventObject } from "@/services/sponsorService";
 import { useStore, mapGetters } from 'vuex';
 import axios from "axios";
+import { toast } from "@/utils/toast.js";
 
 // List of sponsors
 const sponsors = ref([]);
@@ -863,6 +871,7 @@ const handleAddSponsor = async () => {
     addFile.value = null;
     showAddForm.value = false;
     selectedImage.value = false;
+    toast.success("Sponsor added");
 
   } catch(err) {
     // console.error("Error adding sponsor: ", err);
@@ -895,6 +904,7 @@ const removeSponsor = async () => {
   
     removeName.value = "";
     showRemoveForm.value = false;
+    toast.success("Sponsor removed");
   } catch (err) {
       const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor due to a network or server error.";
       removeFormError.value = errorMessage;
@@ -936,6 +946,7 @@ const handleAddTier = async () => {
     tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
 
     showAddTierForm.value = false;
+    toast.success("Tier added");
   }catch (err){
     const errorMessage = err.response?.data?.error || "Failed to add sponsor tier.";
     addTierFormError.value = errorMessage;
@@ -985,6 +996,7 @@ const handleUpdateTier = async () => {
       await fetchSponsorsAndTiers();
 
       showEditTierForm.value = false;
+      toast.success("Tier updated");
   }catch (err){
       const errorMessage = err.response?.data?.error || "Failed to update sponsor tier.";
       editTierFormError.value = errorMessage;
@@ -1016,6 +1028,7 @@ const removeSponsorTiers = async () => {
   
     removeTierName.value = "";
     showRemoveTierForm.value = false;
+    toast.success("Tier removed");
   } catch (err) {
     const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to delete sponsor tier due to a server error.";
     removeTierFormError.value = errorMessage;
@@ -1108,6 +1121,7 @@ const handleUpdateSponsor = async () => {
       editId.value = null;
       editFile.value = null;
     selectedImage.value = false;
+    toast.success("Sponsor updated");
   }catch (err){
     // console.error("Error updating sponsor: ", err);
     const errorMessage = err.response?.data?.message || err.response?.data?.error || "An unknown error occurred during update.";

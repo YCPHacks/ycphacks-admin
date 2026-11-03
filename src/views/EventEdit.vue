@@ -185,6 +185,7 @@
 <script>
 import axios from 'axios';
 import store from "../store/store.js";
+import { toast } from "@/utils/toast.js";
 
 export default {
   name: 'EventEdit',
@@ -219,9 +220,11 @@ export default {
           endDate: new Date(this.event.endDate).toISOString()
         }
         await axios.put(`${store.state.apiBaseUrl}/event/update`, updatedEvent);
+        toast.success("Event updated");
         this.$router.push({ name: 'Events' });
       } catch (e) {
         console.error('Error updating event:', e);
+        toast.error(`Failed to update event: ${e.response?.data?.message || e.message}`);
       }
     },
     async fetchEvent() {

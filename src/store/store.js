@@ -3,8 +3,12 @@ import axios from "axios";
 import router from '../router/index.js';
 import UserAdapter from "./UserAdapter.js";
 import { formatDateToEST } from "@/utils/formatDate.js";
+import toasts from './toasts.js';
 
 export default createStore({
+    modules: {
+        toasts
+    },
     state: {
         user: {},
         sponsors: [],
@@ -24,6 +28,9 @@ export default createStore({
         },
         clearUser(state){
             state.user = null
+        },
+        setToastPreference(state, enabled) {
+            state.user.notificationPreference_toast = enabled;
         },
         setSponsors(state, sponsors){
             state.sponsors = sponsors;
@@ -112,6 +119,18 @@ export default createStore({
                 return { success: true, message: data.message };
             } catch (error) {
                 return { success: false, message: error.response?.data?.message || "Authentication failed" };
+            }
+        },
+        async updateToastPreference({ commit, state }, enabled) {
+            try {
+                await axios.put(`${state.apiBaseUrl}/user/${state.user.id}`,
+                    { notificationPreference_toast: enabled }, { headers: { 'Content-Type': 'application/json' } });
+
+                commit("setToastPreference", enabled);
+
+                return { success: true };
+            } catch (error) {
+                return { success: false, message: error.response?.data?.message || "Failed to update notification preference" };
             }
         },
         async logout({commit}) {

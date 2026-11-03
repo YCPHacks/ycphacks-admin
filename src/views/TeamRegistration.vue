@@ -2,22 +2,20 @@
     <div class="container mt-5">
         <h2 class="mb-4 text-center">Team Registration</h2>
 
-        <div class="d-flex justify-content-end gap-2 mb-3">
-          <div class="text-end mb-3">
-            <button class="btn btn-primary" @click="downloadTeamsPDF">
-                Export Teams
+        <div class="page-actions">
+          <div>
+            <button class="btn btn-primary" :disabled="PDFloading" @click="downloadTeamsPDF">
+                <span v-if="PDFloading" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                {{ PDFloading ? 'Generating PDF...' : 'Export Teams' }}
             </button>
-            <div v-if="PDFloading" class="fixed bottom-4 right-4 bg-gray-800 text-black px-4 py-2 rounded shadow">
-              Generating PDF, please wait...
-            </div>
           </div>
             <!-- Add Team Button -->
-            <div class="text-end mb-3">
+            <div>
                 <button class="btn btn-primary" @click="toggleAddForm">
                     Add Team
                 </button>
             </div>
-            <div v-if="isOscar" class="text-end mb-3">
+            <div v-if="isOscar">
                 <button class="btn btn-primary" @click="toggleRemoveForm">
                     Remove Team
                 </button>
@@ -32,34 +30,36 @@
 
                 <div class="table-container shadow-lg rounded overflow-hidden">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
+                        <table class="table table-cards table-striped table-hover">
                             <thead class="thead-light">
                                 <tr>
                                     <th v-for="header in tableHeaders" :key="header.key" class="text-left">
                                         {{ header.label }}
                                     </th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="filteredTeamData.length === 0">
-                                    <!-- Colspan should match the number of dynamic headers -->
-                                    <td :colspan="tableHeaders.length" class="alert alert0info p-2 text-center">
+                                    <!-- Colspan should match the number of dynamic headers plus Actions -->
+                                    <td :colspan="tableHeaders.length + 1" class="alert alert0info p-2 text-center">
                                         No Teams Available
                                     </td>
                                 </tr>
                                 <tr 
                                     v-for="(item, index) in filteredTeamData" 
-                                    :key="item.id || index" 
-                                    @click="openEditTeamForm(item)" 
-                                    style="cursor: pointer;"
+                                    :key="item.id || index"
                                 >
-                                    <td v-for="header in tableHeaders" :key="header.key" class="text-center">
+                                    <td v-for="header in tableHeaders" :key="header.key" :data-label="header.label" class="text-center">
                                         <span v-if="header.key === 'participants'">
                                             {{ formatParticipants(item.participants) }}
                                         </span>
                                         <span v-else>
                                             {{ item[header.key] }}
                                         </span>
+                                    </td>
+                                    <td class="text-center card-actions">
+                                        <button class="btn btn-sm btn-warning" @click="openEditTeamForm(item)">Edit</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -77,10 +77,6 @@
                     <h5>Add New Team</h5>
                 </header>
 
-                <!-- Error/Success Alert Structure -->
-                <div v-if="error || success" :class="['alert p-2 mb-3', error ? 'alert-danger' : 'alert-success']" role="alert">
-                    <i class="bi bi-info-circle-fill"></i> {{ error || success }}
-                </div>
 
                 <form @submit.prevent="handleAddTeam">
                     <div v-if="addFormError" class="alert alert-danger p-2 mb-3">
@@ -218,9 +214,6 @@
                 </header>
                 
                 <div class="modal-body">
-                    <div v-if="error || success" :class="['alert p-2 mb-3', error ? 'alert-danger' : 'alert-success']" role="alert">
-                        <i class="bi bi-info-circle-fill"></i> {{ error || success }}
-                    </div>
                     
                     <form @submit.prevent="handleUpdateTeam" id="editTeamForm"> 
                         <div v-if="editFormError" class="alert alert-danger p-2 mb-3">
@@ -302,6 +295,7 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+import { toast } from "@/utils/toast.js";
 const API_BASE_URL = `${store.state.apiBaseUrl}`;
 
 export default{
@@ -338,8 +332,6 @@ export default{
             selectedParticipantsIds: [], // Participants currently selected in the form
             loading: false,
             PDFloading: false,
-            error: null, // Error message for the Add Form
-            success: null, // Success message for the Add Form
             MIN_PARTICIPANTS: 1,
             VISUAL_SLOTS: 4,
         }
@@ -487,8 +479,6 @@ export default{
             this.unassignedUsers = this.unassignedUsers.filter(p => p.id !== bannedUserId)
         },
         openEditTeamForm(item) {
-          this.error = null;
-          this.success = null;
           this.editFormError = null;
 
           this.showAddForm = false;
@@ -508,8 +498,6 @@ export default{
             this.editTeamId = null;
             this.editFormError = null;
             this.loading = false;
-            this.error = null;
-            this.success = null;
         },
 
         async handleUpdateTeam(){
@@ -530,15 +518,12 @@ export default{
                 };
 
                 const response = await axios.put(`${API_BASE_URL}/teams/${teamId}`, payload);
-                this.success = response.data.message || 'Team updated successfully!';
+                toast.success(response.data.message || 'Team updated successfully!');
 
                 await this.fetchTeams();
                 await this.fetchUnassignedUsers();
 
-                setTimeout(() => {
-                    this.cancelEdit();
-                    this.success = null;
-                }, 1500);
+                this.cancelEdit();
             }catch(err){
                 this.editFormError = err.response?.data?.message || "Failed to update team. Please check the form and try again.";
             }
@@ -578,7 +563,7 @@ export default{
 
           } catch(err) {
             console.error("Error exporting team: ", err);
-            this.error = err.response?.data?.message || err.response?.data?.error || "Failed to export teams.";
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to export teams.");
             this.PDFloading = false;
           }
         },
@@ -599,8 +584,6 @@ export default{
         },
         async handleAddTeam() {
             this.addFormError = null;
-            this.error = null;
-            this.success = null;
             
             // Client-side validation: Check minimum participants
             if (!this.isTeamMinMet) {
@@ -621,16 +604,17 @@ export default{
                 // --- Actual API Call (Uncomment when API is ready) ---
                 const response = await axios.post(`${API_BASE_URL}/teams/create`, teamPayload);
                 
-                this.success = `Team '${this.formData.teamName}' successfully registered and ${teamPayload.participantIds.length} members assigned!`;
-                
+                toast.success(`Team '${this.formData.teamName}' successfully registered and ${teamPayload.participantIds.length} members assigned!`);
+
                 // Re-fetch the data to update the lists
                 this.fetchTeams();
                 this.fetchUnassignedUsers();
 
+                this.handleCancel();
 
             } catch (err) {
                 console.error("Error adding team: ", err);
-                this.error = err.response?.data?.message || err.response?.data?.error || "Failed to register team. Please check the form and try again.";
+                this.addFormError = err.response?.data?.message || err.response?.data?.error || "Failed to register team. Please check the form and try again.";
             } finally {
                 this.loading = false;
             }
@@ -663,17 +647,14 @@ export default{
                 // API call to delete the team using the stored editTeamId
                 const response = await axios.delete(`${API_BASE_URL}/teams/${this.teamIdForDeletion}`);
                 
-                this.success = response.data.message || `Team '${this.editFormData.teamName}' successfully deleted.`;
-                
+                toast.success(response.data.message || `Team '${this.editFormData.teamName}' successfully deleted.`);
+
                 // Cleanup: Re-fetch the lists and close all modals
                 await this.fetchTeams();
                 await this.fetchUnassignedUsers();
-                
-                setTimeout(() => {
-                    this.cancelEdit(); // Clears all edit-related state
-                    this.cancelRemove(); // Clears remove-related state
-                    this.success = null;
-                }, 1500);
+
+                this.cancelEdit(); // Clears all edit-related state
+                this.cancelRemove(); // Clears remove-related state
 
             } catch (err) {
                 console.error("Error removing team:", err);

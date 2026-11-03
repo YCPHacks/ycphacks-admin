@@ -1,16 +1,19 @@
 <template>
   <div class="container mt-5">
-    <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary add-hardware-btn">Import CSV File</button>
-
-    <button @click="openAddModal" class="btn btn-primary add-hardware-btn">
-      Add Hardware
-    </button>
     <h2 class="mb-4 text-center">Hardware List</h2>
+
+    <div class="page-actions">
+      <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary">Import CSV File</button>
+
+      <button @click="openAddModal" class="btn btn-primary">
+        Add Hardware
+      </button>
+    </div>
 
 
     <div class="table-container shadow-lg rounded overflow-hidden mt-3">
       <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table table-cards table-striped table-hover">
           <thead class="table-dark">
           <tr>
             <th>Name</th>
@@ -28,21 +31,21 @@
           </tr>
 
           <tr v-for="hardware in hardwareList" :key="hardware.id">
-            <td>{{ hardware.name }}</td>
+            <td data-label="Name">{{ hardware.name }}</td>
 
-            <td>
+            <td data-label="Image">
               <img
-                  v-if="hardware.images && hardware.images.length > 0"
-                  :src="hardware.images[0].imageUrl"
+                  v-if="hardware.imageUrl"
+                  :src="hardware.imageUrl"
                   :alt="`${hardware.name} Image`"
                   class="hardware-img"
               />
               <span v-else class="text-muted">No image</span>
             </td>
 
-            <td>{{ hardware.serial }}</td>
+            <td data-label="Serial Number">{{ hardware.serial }}</td>
 
-            <td>
+            <td data-label="Functional">
                 <span
                     class="badge"
                     :class="hardware.functional ? 'bg-success' : 'bg-danger'"
@@ -51,9 +54,9 @@
                 </span>
             </td>
 
-            <td>{{ hardware.description }}</td>
+            <td data-label="Description">{{ hardware.description }}</td>
 
-            <td>
+            <td class="text-center card-actions">
               <button
                   @click="editHardware(hardware)"
                   class="btn btn-warning btn-sm me-2"
@@ -89,6 +92,37 @@
                 required
             />
           </div>
+
+          <div class="form-group mt-2">
+  <label>Hardware Type (shared by multiple items)</label>
+
+  <select
+    v-model="hardwareForm.hardwareTypeId"
+    class="form-control"
+    :required="!newTypeName.trim()"
+    :disabled="!!newTypeName.trim()"
+  >
+    <option value="" disabled>Select type</option>
+    <option
+      v-for="type in hardwareTypes"
+      :key="type.id"
+      :value="type.id"
+    >
+      {{ type.name }}
+    </option>
+  </select>
+
+  <input
+    v-model="newTypeName"
+    class="form-control mt-2"
+    placeholder="Or enter a new type name"
+  />
+
+  <small>
+    Enter a new type name to create it, or select an existing type.
+    Uploading a new image changes the image for every item of this type.
+  </small>
+</div>
 
           <div class="form-group mt-2">
             <label for="hardwareSerial">Serial Number</label>
@@ -180,6 +214,7 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+import { toast } from "@/utils/toast.js";
 
 export default {
   name: "HardwareTab",
@@ -187,6 +222,8 @@ export default {
   data() {
     return {
       hardwareList: [],
+      hardwareTypes: [],
+      newTypeName: "",
       showHardwareModal: false,
       isEditing: false,
       isUploading: false, // New state for better UX
@@ -195,6 +232,7 @@ export default {
 
       hardwareForm: {
         id: null,
+        hardwareTypeId: "",
         hardwareName: "", // Updated field name to match backend/database structure
         serial: "",
         functional: true,
@@ -225,10 +263,15 @@ export default {
 
   created() {
     this.fetchHardwareList();
+    this.fetchTypes();
   },
 
   methods: {
     // --- Data Fetching ---
+    async fetchTypes() {
+      const { data } = await axios.get(`${store.state.apiBaseUrl}/hardware/types`);
+      this.hardwareTypes = data;
+    },
     async fetchHardwareList() {
       try {
         const response = await axios.get(
@@ -247,7 +290,8 @@ export default {
           description: item.description || "",
           whoHasId: item.whoHasId || "",
           // Access the images array returned by the repository's 'include'
-          images: item.images || [],
+          imageUrl: item.hardwareType?.imageUrl || null,
+          hardwareTypeId: item.hardwareTypeId,
         }));
 
       } catch (error) {
@@ -268,6 +312,7 @@ export default {
       // Map the data structure to the form structure
       this.hardwareForm = {
         id: hardware.id,
+        hardwareTypeId: hardware.hardwareTypeId,
         hardwareName: hardware.name, // Use the correct field name for the backend
         serial: hardware.serial,
         functional: hardware.functional,
@@ -276,11 +321,10 @@ export default {
       };
 
       // Set the existing image URL for preview
-      this.currentPrimaryImageUrl = hardware.images.length > 0
-          ? hardware.images[0].imageUrl
-          : null;
+      this.currentPrimaryImageUrl = hardware.imageUrl;
 
       this.selectedFile = null;
+      this.newTypeName = "";
       this.showHardwareModal = true;
     },
 
@@ -326,16 +370,28 @@ export default {
         // Step 1: Upload image if a new one was selected
         const newImageUrl = await this.uploadImageIfNeeded();
 
+        let typeId = this.hardwareForm.hardwareTypeId;
+        if (this.newTypeName.trim()) {
+          const { data } = await axios.post(`${store.state.apiBaseUrl}/hardware/types`, {
+            name: this.newTypeName.trim(), imageUrl: newImageUrl
+          });
+          typeId = data.id;
+        } else if (newImageUrl && typeId) {
+          await axios.put(`${store.state.apiBaseUrl}/hardware/types/${typeId}`, { imageUrl: newImageUrl });
+        }
+        if (!typeId) throw new Error('Select or create a hardware type');
+
         // 1. Construct the payload for the Hardware table
         const hardwarePayload = {
           // Use the correct field names for the backend: hardwareName, serial, functional, description
           hardwareName: this.hardwareForm.hardwareName,
+          hardwareTypeId: Number(typeId),
           serial: this.hardwareForm.serial,
           functional: this.hardwareForm.functional,
           description: this.hardwareForm.description,
           whoHasId:
               this.hardwareForm.whoHasId === "" ||
-              this.hardwareForm.whoHasId.toLowerCase() === "none" ? null : Number(this.hardwareForm.whoHasId),
+              String(this.hardwareForm.whoHasId).toLowerCase() === "none" ? null : Number(this.hardwareForm.whoHasId),
         };
 
         let hardwareResponse;
@@ -353,26 +409,14 @@ export default {
           hardwareResponse = await axios.post(`${store.state.apiBaseUrl}/hardware/add`, hardwarePayload);
         }
 
-        // Step 3: Link the new image to the created/updated hardware
-        if (newImageUrl) {
-          // Determine the hardware ID: use the ID from the form (edit) or the new ID from the response (create)
-          const hardwareId = this.isEditing ? this.hardwareForm.id : hardwareResponse.data.id;
-
-          // NOTE: This assumes your /hardware/add endpoint returns the ID of the new hardware item.
-
-          // Call the controller to save the URL to the HardwareImage table
-          await axios.post(`${store.state.apiBaseUrl}/hardware/image/add`, {
-            imageUrl: newImageUrl,
-            hardwareId: hardwareId
-          });
-        }
-
+        await this.fetchTypes();
         await this.fetchHardwareList();
         this.closeModal();
+        toast.success("Hardware saved");
 
       } catch (error) {
         console.error("Error saving hardware:", error);
-        alert('Failed to save hardware. Check console for details.');
+        toast.error(`Failed to save hardware: ${error.response?.data?.message || error.message}`);
       }
     },
 
@@ -385,8 +429,10 @@ export default {
         // but that requires a separate backend endpoint.
         await axios.delete(`${store.state.apiBaseUrl}/hardware/delete/${id}`);
         await this.fetchHardwareList();
+        toast.success("Hardware deleted");
       } catch (error) {
         console.error("Error deleting hardware:", error);
+        toast.error(`Failed to delete hardware: ${error.response?.data?.message || error.message}`);
       }
     },
 
@@ -398,6 +444,7 @@ export default {
     resetForm() {
       this.hardwareForm = {
         id: null,
+        hardwareTypeId: "",
         hardwareName: "",
         serial: "",
         functional: true,
@@ -405,6 +452,7 @@ export default {
         whoHasId: ""
       };
       this.selectedFile = null;
+      this.newTypeName = "";
       this.currentPrimaryImageUrl = null;
     },
 
@@ -420,8 +468,9 @@ export default {
         await this.fetchHardwareList(); // Refresh hardware list
         this.showImportCSVHardwareModal = false; // Close modal
         this.resetForm();
+        toast.success("Hardware imported");
       } else {
-        this.message = result.message;
+        toast.error(result.message);
       }
 
       this.loading = false;
@@ -432,11 +481,6 @@ export default {
 
 <style scoped>
 /* Styles remain the same */
-.add-hardware-btn {
-  float: right;
-  margin-bottom: 10px;
-  margin-right: 20px;
-}
 
 .hardware-img {
   width: 80px;

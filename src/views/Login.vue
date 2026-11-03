@@ -17,16 +17,6 @@
           <input type="password" id="password" v-model="password" placeholder="********" required/>
         </div>
 
-        <div v-if="showAlert">
-          <b-alert
-              v-model="showAlert"
-              variant="danger"
-              class="error-box"
-          >
-            <span><strong>Error: </strong>{{ message }}</span>
-          </b-alert>
-        </div>
-
         <button type="submit" class="login-button">Sign in</button>
 
         <p class="footer-text" style="margin-top: 15px;">
@@ -41,6 +31,7 @@
 <script>
 import {mapActions} from "vuex";
 import store from "@/store/store.js";
+import { toast } from "@/utils/toast.js";
 
 export default {
   name: "Login",
@@ -49,26 +40,23 @@ export default {
       email: "",
       password: "",
       showPassword: false,
-      isLoading: false,
-      message: "",
-      showAlert: false
+      isLoading: false
     };
   },
   methods: {
     ...mapActions(['loginAdminUser']),
     async handleSubmit() {
       this.isLoading = true;
-      this.showAlert = false;
       const formData = { email: this.email, password: this.password };
 
       try {
         const result = await store.dispatch('loginAdminUser', formData);
 
         if (result.success) {
+          toast.success(`Welcome back, ${this.$store.state.user.firstName}!`);
           this.$router.push('/dashboard');
         } else {
-          this.message = result.message;
-          this.showAlert = true;
+          toast.error(result.message);
         }
       } finally {
         this.isLoading = false;
@@ -157,17 +145,5 @@ export default {
 
 .signup-link a:hover {
   text-decoration: underline;
-}
-
-.error-box {
-  background-color: rgba(255, 182, 193, 0.2); /* Translucent pink */
-  border: 1px solid #ffb6c1; /* Solid pink border */
-  color: #d81b60; /* Pink text */
-  padding: 14px;
-  border-radius: 8px;
-  margin: 15px 0;
-  font-size: 0.9rem;
-  text-align: center;
-  box-shadow: 0 2px 10px rgba(255, 182, 193, 0.1);
 }
 </style>
