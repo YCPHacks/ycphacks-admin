@@ -65,7 +65,9 @@
         </div>
       </div>
 
-
+      <button class="btn btn-primary mb-0 fw-bold" @click="showImportModal = true" v-if="isOscar">
+        Import CSV
+      </button>
       <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="isOscar">
         Export Users
       </button>
@@ -81,7 +83,55 @@
     <!-- - Also for changing user's role -->
     <!-- Add Download User emails button-->
     <!-- Add Export All Users button -->
+    <!-- IMPORT USERS CSV MODAL -->
+  <div
+    v-if="showImportModal"
+    class="modal d-block"
+    tabindex="-1"
+    style="background-color: rgba(0,0,0,0.5);"
+  >
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Import User Registrations</h5>
+        <button type="button" class="btn-close" @click="showImportModal = false"></button>
+      </div>
 
+      <div class="modal-body">
+        <p>Select the CSV file downloaded from Google Sheets.</p>
+
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          class="form-control"
+          @change="handleImportFile"
+        />
+
+        <p v-if="importError" class="text-danger mt-2">
+          {{ importError }}
+        </p>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          class="btn btn-secondary"
+          @click="showImportModal = false"
+          :disabled="isImporting"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-success"
+          @click="importUsersCSV"
+          :disabled="!importFile || isImporting"
+        >
+          {{ isImporting ? "Importing..." : "Import" }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
     <!-- EXPORT USERS MODAL -->
     <div v-if="showExportModal" class="modal d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
       <div class="modal-dialog modal-lg" role="document">
@@ -286,7 +336,8 @@
               </td>
             </tr>
             <tr v-for="(user, index) in filteredUsers" :key="user.id"
-              @click="openEditUserForm(index)" style="cursor: pointer;">
+              @click="openEditUserForm(index)"
+              style="{ cursor: pointer; }">
 
               <td class="text-center align-middle" style="width: 1px">
                 <span v-if="user.isBanned" class="text-danger fs-4" title="BANNED USER">
@@ -462,13 +513,23 @@ export default {
 
       showExportModal: false,
       exportRoleFilter: 'PARTICIPANT',
-      exportFields: []
+      exportFields: [],
+
+      showImportModal: false,
+      importFile: null,
+      importError: "",
+      isImporting: false
     };
   },
   async mounted() {
-    await this.$store.dispatch('getActiveEvent'); 
-    this.fetchUsers();
-  },
+    try {
+      await this.$store.dispatch('getActiveEvent');
+    } catch (error) {
+      console.warn("No active event found:", error);
+    }
+    
+      await this.fetchUsers();
+    },
   computed: {
     activeEventId(){
       return this.$store.state.event?.id;
@@ -717,16 +778,85 @@ export default {
         }
       }
     },
-    async fetchUsers() {
-      const eventId = this.activeEventId;
+    handleImportFile(event) {
+      this.importFile = event.target.files[0] || null;
+      this.importError = "";
+    },
+
+    async importUsersCSV() {
+      if (!this.importFile || this.isImporting) return;
+
+      this.isImporting = true;
+      this.importError = "";
 
       try {
-        const response = await axios.get(`${store.state.apiBaseUrl}/user/all?eventId=${eventId}`);
-        this.users = response.data.data;
+        const csvText = await this.importFile.text();
+
+        const response = await axios.post(
+          `${store.state.apiBaseUrl}/user/importCSV`,
+          csvText,
+          {
+            headers: {
+              "Content-Type": "text/csv"
+            }
+          }
+        );
+
+        const result = response.data;
+
+        const summary = [
+        result.message || "CSV import completed.",
+        `Already enrolled: ${result.alreadyEnrolled || 0}`,
+        `Failed: ${result.failed || 0}`
+        ];
+
+    if (result.errors?.length) {
+      summary.push(
+        "",
+        "Failed rows:",
+        ...result.errors.map(error =>
+          `Row ${error.row}: ${error.reason}`
+        )
+      );
+    }
+
+    alert(summary.join("\n"));
+
+        this.showImportModal = false;
+        this.importFile = null;
+
+        await this.fetchUsers();
+
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("CSV import failed:", error);
+        this.importError =
+          error.response?.data?.message || "Failed to import CSV";
+      } finally {
+        this.isImporting = false;
       }
     },
+    async fetchUsers() {
+  try {
+    if (!this.activeEventId) {
+      this.users = [];
+      return;
+    }
+
+    const usersResponse = await axios.get(
+      `${store.state.apiBaseUrl}/user/all`,
+      {
+        params: {
+          eventId: this.activeEventId
+        }
+      }
+    );
+
+    this.users = usersResponse.data.data || [];
+
+  } catch (error) {
+    console.error("Error fetching users:", error);
+  }
+},
     async toggleCheckIn(userId){
       // console.log('Attempting to toggle check-in for ID:', userId);
       const userIdNumber = Number(userId);
