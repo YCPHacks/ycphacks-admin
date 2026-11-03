@@ -25,45 +25,46 @@
     <!-- Add Total Users -->
     <div class="tshirt-compact-row items-center">
     
-      <h5 class="me-4 text-nowrap mb-0 lh-1">
+      <h5 class="text-nowrap mb-0 lh-1">
         👕 T-Shirt Sizes ({{ activeTab.toUpperCase() }}):
       </h5>
       
       <div 
         v-for="(count, size) in tshirtSizeTally.tally" 
         :key="size" 
-        class="me-3 text-nowrap lh-1"
+        class="text-nowrap lh-1"
         :class="{'text-danger fw-bold': size === 'N/A'}"
       >
         <span class="fw-bold">{{ size }}:</span> {{ count }}
       </div>
 
-      <span class="badge bg-primary fs-6 text-nowrap me-3 ms-auto mb-0">
+      <span class="badge total-order text-primary-emphasis bg-primary-subtle text-nowrap mb-0">
         Total Order: {{ tshirtSizeTally.totalShirts }}
       </span>
 
-      <!-- Qr Code Scanner -->
-      <button @click=openScanner class="btn btn-success mb-0 fw-bold me-3">
-        Scan User QR Code
-      </button>
-
-      <div v-if="showScanner" class="modal-overlay-scanner">
-        <div class="modal-content-scanner">
-        <h3>Scan QR code</h3>
-
-        <qrcode-stream
-            :paused="paused"
-            @init="onInit"
-            @detect="QRDetect"
-            class="scanner-camera"
-        />
-
-        <button @click="closeScanner" class="btn btn-success mb-0 fw-bold">
-          Close
+      <div class="tally-actions">
+        <!-- Qr Code Scanner -->
+        <button @click=openScanner class="btn btn-success mb-0 fw-bold">
+          Scan User QR Code
         </button>
 
+        <div v-if="showScanner" class="modal-overlay-scanner">
+          <div class="modal-content-scanner">
+          <h3>Scan QR code</h3>
+
+          <qrcode-stream
+              :paused="paused"
+              @init="onInit"
+              @detect="QRDetect"
+              class="scanner-camera"
+          />
+
+          <button @click="closeScanner" class="btn btn-success mb-0 fw-bold">
+            Close
+          </button>
+
+          </div>
         </div>
-      </div>
 
       <button class="btn btn-primary mb-0 fw-bold" @click="showImportModal = true" v-if="isOscar">
         Import CSV
@@ -313,7 +314,7 @@
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
       <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table table-cards table-striped table-hover">
           <thead class="thead-light">
             <tr>
               <th class="text-center" style="width: 1px;">🚨</th>
@@ -327,11 +328,12 @@
               <th class="text-left">School</th>
               <th class="text-left">T-Shirt Size</th>
               <th class="text-left">Dietary Restrictions</th>
+              <th v-if="isOscar">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="filteredUsers.length === 0">
-              <td colspan="10" class="text-center py-4 text-muted">
+              <td colspan="11" class="text-center py-4 text-muted">
                 No users found
               </td>
             </tr>
@@ -339,14 +341,14 @@
               @click="openEditUserForm(index)"
               style="{ cursor: pointer; }">
 
-              <td class="text-center align-middle" style="width: 1px">
+              <td data-label="Banned" class="text-center align-middle" style="width: 1px">
                 <span v-if="user.isBanned" class="text-danger fs-4" title="BANNED USER">
                   ⚠️
                 </span>
                 <span v-else class="text-muted">-</span>
               </td>
               <!-- Add Check Boxes for Check in -->
-              <td v-if="activeTab === 'all'" class="role-column">
+              <td data-label="Role" v-if="activeTab === 'all'" class="role-column">
                 <div class="role-badge-wrapper">
                   <span 
                     class="badge role-badge text-center" 
@@ -356,24 +358,23 @@
                   </span>
                 </div>
               </td>
-              <td class="text-center align-middle table-checkbox-center" v-if="activeTab === 'participant'">
+              <td data-label="Checked In?" class="text-center align-middle table-checkbox-center" v-if="activeTab === 'participant'">
                 <input 
                   type="checkbox" 
                   :checked="user.checkIn" 
-                  @change="toggleCheckIn(user.id)" 
-                  @click.stop
+                  @change="toggleCheckIn(user.id)"
                   class="form-check-input"
                 >
               </td>
-              <td>{{ user.firstName }}</td>
-              <td>{{ user.lastName }}</td>
-              <td>{{ user.age }}</td>
-              <td>{{ user.email }}</td>
-              <td>{{ user.phoneNumber }}</td>
-              <td>{{ user.school }}</td>
-              <td>{{ user.tShirtSize }}</td>
+              <td data-label="First Name">{{ user.firstName }}</td>
+              <td data-label="Last Name">{{ user.lastName }}</td>
+              <td data-label="Age">{{ user.age }}</td>
+              <td data-label="Email">{{ user.email }}</td>
+              <td data-label="Phone Number">{{ user.phoneNumber }}</td>
+              <td data-label="School">{{ user.school }}</td>
+              <td data-label="T-Shirt Size">{{ user.tShirtSize }}</td>
               <!-- Add in dietary highlights -->
-              <td class="text-center">
+              <td data-label="Dietary Restrictions" class="text-center">
                 <span 
                   v-if="user.dietaryRestrictions && user.dietaryRestrictions.toLowerCase() !== 'none' && user.dietaryRestrictions.toLowerCase() !== 'null'"
                   :class="getDietaryRestriction(user.dietaryRestrictions)"
@@ -381,6 +382,9 @@
                   {{ user.dietaryRestrictions }}
                 </span>
                 <span v-else class="text-muted">–</span>
+              </td>
+              <td v-if="isOscar" class="text-center card-actions">
+                <button class="btn btn-sm btn-warning" @click="openEditUserForm(index)">Edit</button>
               </td>
             </tr>
           </tbody>
@@ -649,11 +653,11 @@ export default {
           const index = this.users.findIndex(u => u.id === updatedUser.id);
 
           if (index !== -1 && this.users[index].checkIn === true) {
-            toast.warning(`${updatedUser.firstName} ${updatedUser.lastName} is already checked in.`);
+            toast.always.warning(`${updatedUser.firstName} ${updatedUser.lastName} is already checked in.`);
             return;
           }
 
-          toast.success(`${updatedUser.firstName} ${updatedUser.lastName} checked in!`);
+          toast.always.success(`${updatedUser.firstName} ${updatedUser.lastName} checked in!`);
 
           // Update only the checkIn property
           await this.toggleCheckIn(updatedUser);
@@ -719,7 +723,7 @@ export default {
 
       if (usersToExport.length === 0) {
         console.warn(`No users found for the selected role: ${role}.`);
-        toast.warning(`Cannot export: No users found for the selected role filter (${role}).`);
+        toast.always.warning(`Cannot export: No users found for the selected role filter (${role}).`);
         return;
       }
 
@@ -728,7 +732,7 @@ export default {
 
       if (selectedFields.length === 0) {
         console.warn("Please select at least one data field (column) to export.");
-        toast.warning("Please select at least one data field (column) to export.");
+        toast.always.warning("Please select at least one data field (column) to export.");
         return;
       }
 
@@ -1201,13 +1205,23 @@ table tbody tr td.table-checkbox-center .form-check-input{
 .tshirt-compact-row {
   background-color: #f8f9fa; /* Light background for visibility */
   border: 1px solid #dee2e6;
-  padding: 8px 5px; /* Smaller padding */
+  padding: 12px; /* Smaller padding */
   border-radius: 0.5rem;
   font-size: 0.9rem; /* Slightly smaller font */
   display: flex; /* Ensures flexible alignment */
-  flex-wrap: nowrap; /* CRITICAL: Prevents wrapping to multiple lines */
-  overflow-x: auto; /* Allows scrolling if the list gets too long */
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
   align-items: center !important;
+}
+
+/* Always on its own row, below the size counts and Total Order */
+.tally-actions {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .tshirt-compact-row h5 {
@@ -1278,6 +1292,30 @@ table tbody tr td.table-checkbox-center .form-check-input{
   height: 300px;
 }
 
+/* Matches the size tallies. The light tint keeps it from reading as a button */
+.tshirt-compact-row .total-order {
+  font-size: inherit;
+}
 
+/* The tally is too long to share a line with the title */
+@media (max-width: 1199.98px) {
+  .tshirt-compact-row h5 {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Stay side by side until they no longer fit */
+  .tally-actions > .btn {
+    flex: 1 1 auto;
+  }
+
+  /* Line the check-in box up with the other values on the card */
+  table tbody tr td.table-checkbox-center .form-check-input {
+    margin-top: 0;
+    margin-right: 0 !important;
+  }
+}
 </style>
 

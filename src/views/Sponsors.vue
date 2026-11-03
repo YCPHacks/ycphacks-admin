@@ -2,30 +2,30 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Our Sponsors</h2>
 
-    <div class="d-flex justify-content-end gap-2 mb-3">
+    <div class="page-actions">
       <!-- Add Sponsor Tier Button -->
-      <div v-if="isOscar" class="text-end mb-3">
+      <div v-if="isOscar">
         <button class="btn btn-primary" @click="toggleAddTierForm">
           Add Sponsor Tier
         </button>
       </div>
 
       <!-- Remove Sponsor Tier Button -->
-      <div v-if="isOscar" class="text-end mb-3">
+      <div v-if="isOscar">
         <button class="btn btn-primary" @click="toggleRemoveTierForm">
           Remove Sponsor Tier
         </button>
       </div>
 
       <!-- Add Sponsor Button -->
-      <div class="text-end mb-3">
+      <div>
         <button class="btn btn-primary" @click="toggleAddForm">
           Add Sponsor
         </button>
       </div>
 
       <!-- Remove Sponsor Button -->
-      <div v-if="isOscar" class="text-end mb-3">
+      <div v-if="isOscar">
         <button class="btn btn-primary" @click="toggleRemoveForm">
           Remove Sponsor
         </button>
@@ -302,15 +302,19 @@
                   <tr>
                     <th class="text-left">Tier Name</th>
                     <th class="text-left">Donation Range</th>
+                    <th v-if="isOscar" class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="tierRanges.length === 0">
-                    <td colspan="2" class="alert alert-info p-2 text-center">No tiers defined</td>
+                    <td colspan="3" class="alert alert-info p-2 text-center">No tiers defined</td>
                   </tr>
-                  <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index" @click="openEditTierForm(tierData)" style="cursor: pointer;">
+                  <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index">
                     <td class="text-center">{{ tierData.tier }}</td>
                     <td class="text-center">{{ tierData.range }}</td>
+                    <td v-if="isOscar" class="text-center">
+                      <button class="btn btn-sm btn-warning" @click="openEditTierForm(tierData)">Edit</button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -323,38 +327,41 @@
         
         <div class="table-container shadow-lg rounded overflow-hidden">
           <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-cards table-striped table-hover">
               <thead class="thead-light">
                 <tr>
                   <th class="text-left">Sponsor Name</th>
                   <th class="text-left">Sponsor Tier</th>
                   <th class="text-left">Website</th>
+                  <th class="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="sponsors.length === 0">
-                  <td colspan="3" class="alert alert-info p-2 text-center">No sponsors available</td>
+                  <td colspan="4" class="alert alert-info p-2 text-center">No sponsors available</td>
                 </tr>
                 <tr 
                   v-for="(sponsor, index) in sponsors" 
-                  :key="sponsor.id || index" 
-                  @click="openEditForm(index)" 
-                  style="cursor: pointer"
+                  :key="sponsor.id || index"
                   >
                   
                   <td 
-                    class="text-center"
+                    class="text-center" data-label="Sponsor Name"
                     
                     :class="{ 'highlight-name-needs-update': isSponsorTierInvalid(sponsor, tiers) }"
                   >
                     {{ sponsor.name }}
                   </td>
                   
-                  <td class="text-center">
+                  <td data-label="Sponsor Tier" class="text-center">
                     {{ sponsor.tier }}
                   </td>
                   
-                  <td class="text-left">{{ sponsor.website }}</td>
+                  <td data-label="Website" class="text-left">{{ sponsor.website }}</td>
+
+                  <td class="text-center card-actions">
+                    <button class="btn btn-sm btn-warning" @click="openEditForm(index)">Edit</button>
+                  </td>
                 </tr>
               </tbody>
             </table>

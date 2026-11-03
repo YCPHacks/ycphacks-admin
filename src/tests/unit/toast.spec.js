@@ -83,4 +83,25 @@ describe('Toast notifications (toasts module, toast helper, ToastContainer)', ()
 
         expect(wrapper.find('.app-toast').attributes('role')).toBe('alert');
     });
+
+    it.each(['success', 'info', 'warning'])('hides %s toasts when the user turned toasts off', (type) => {
+        testStore.current = createStore({ state: { user: { notificationPreference_toast: false } }, modules: { toasts } });
+
+        toast[type]('Hidden');
+        expect(testStore.current.getters['toasts/getToasts']).toHaveLength(0);
+    });
+
+    it('still shows error toasts when the user turned toasts off', () => {
+        testStore.current = createStore({ state: { user: { notificationPreference_toast: false } }, modules: { toasts } });
+
+        toast.error('Failed');
+        expect(testStore.current.getters['toasts/getToasts']).toHaveLength(1);
+    });
+
+    it.each(['success', 'warning'])('still shows toast.always.%s() when the user turned toasts off', (type) => {
+        testStore.current = createStore({ state: { user: { notificationPreference_toast: false } }, modules: { toasts } });
+
+        toast.always[type]('Checked in');
+        expect(testStore.current.getters['toasts/getToasts']).toHaveLength(1);
+    });
 });
