@@ -2,24 +2,22 @@
     <div class="container mt-5">
         <h2 class="mb-4 text-center">Team Registration</h2>
 
-        <div class="d-flex justify-content-end gap-2 mb-3">
-          <div class="text-end mb-3">
-            <button class="btn btn-primary" @click="downloadTeamsPDF">
-                Export Teams
+        <div class="page-actions">
+          <div>
+            <button class="btn btn-primary" :disabled="PDFloading" @click="downloadTeamsPDF">
+                <span v-if="PDFloading" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                {{ PDFloading ? 'Generating PDF...' : 'Export Teams' }}
             </button>
-            <div v-if="PDFloading" class="fixed bottom-4 right-4 bg-gray-800 text-black px-4 py-2 rounded shadow">
-              Generating PDF, please wait...
-            </div>
           </div>
 
 
             <!-- Add Team Button -->
-            <div class="text-end mb-3">
+            <div>
                 <button class="btn btn-primary" @click="toggleAddForm">
                     Add Team
                 </button>
             </div>
-            <div v-if="isOscar" class="text-end mb-3">
+            <div v-if="isOscar">
                 <button class="btn btn-primary" @click="toggleRemoveForm">
                     Remove Team
                 </button>
@@ -34,34 +32,36 @@
 
                 <div class="table-container shadow-lg rounded overflow-hidden">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
+                        <table class="table table-cards table-striped table-hover">
                             <thead class="thead-light">
                                 <tr>
                                     <th v-for="header in tableHeaders" :key="header.key" class="text-left">
                                         {{ header.label }}
                                     </th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-if="filteredTeamData.length === 0">
-                                    <!-- Colspan should match the number of dynamic headers -->
-                                    <td :colspan="tableHeaders.length" class="alert alert0info p-2 text-center">
+                                    <!-- Colspan should match the number of dynamic headers plus Actions -->
+                                    <td :colspan="tableHeaders.length + 1" class="alert alert0info p-2 text-center">
                                         No Teams Available
                                     </td>
                                 </tr>
                                 <tr 
                                     v-for="(item, index) in filteredTeamData" 
-                                    :key="item.id || index" 
-                                    @click="openEditTeamForm(item)" 
-                                    style="cursor: pointer;"
+                                    :key="item.id || index"
                                 >
-                                    <td v-for="header in tableHeaders" :key="header.key" class="text-center">
+                                    <td v-for="header in tableHeaders" :key="header.key" :data-label="header.label" class="text-center">
                                         <span v-if="header.key === 'participants'">
                                             {{ formatParticipants(item.participants) }}
                                         </span>
                                         <span v-else>
                                             {{ item[header.key] }}
                                         </span>
+                                    </td>
+                                    <td class="text-center card-actions">
+                                        <button class="btn btn-sm btn-warning" @click="openEditTeamForm(item)">Edit</button>
                                     </td>
                                 </tr>
                             </tbody>

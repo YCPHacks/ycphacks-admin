@@ -1,0 +1,89 @@
+/*
+ * Styles shared across the admin pages.
+ *
+ * .page-actions is the row of page-level buttons. It goes right under the page title.
+ */
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  --bs-btn-bg: #007bff;
+  --bs-btn-border-color: #007bff;
+}
+
+.page-actions .btn {
+  font-size: 0.875rem;
+}
+
+/*
+ * .table-cards shows each table row as a card on phones. Give each <td> a data-label
+ * for its "Label: value" line, and put .card-actions on the <td> holding the buttons.
+ * The !important rules are needed to beat the column widths in each page's scoped CSS.
+ */
+@media (max-width: 767.98px) {
+  .table-cards {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards tbody,
+  .table-cards tr {
+    display: block;
+  }
+
+  .table-cards tr {
+    margin: 12px;
+    padding: 4px 0;
+    border: 1px solid #ddd;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .table-cards td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    width: auto !important;
+    max-width: none !important;
+    padding: 8px 12px !important;
+    border: 0 !important;
+    text-align: right !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .table-cards td[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    max-width: 45%;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  /* The "No results" row */
+  .table-cards td[colspan] {
+    display: block;
+    text-align: center !important;
+  }
+
+  /* Buttons share the full width of the card's bottom edge */
+  .table-cards td.card-actions {
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+    border-top: 1px solid #ddd !important;
+  }
+
+  .table-cards td.card-actions .btn {
+    flex: 1 1 0;
+    margin: 0 !important;
+  }
+}

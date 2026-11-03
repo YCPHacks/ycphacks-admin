@@ -2,13 +2,11 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Prizes & Categories</h2>
 
-    <div class="d-flex justify-content-end gap-2 mb-3">
+    <div v-if="isOscar" class="page-actions">
       <!-- Add Category Button -->
-      <div v-if="isOscar" class="text-end mb-3">
-        <button class="btn btn-primary" @click="toggleAddCategoryForm">
-          Add Category
-        </button>
-      </div>
+      <button class="btn btn-primary" @click="toggleAddCategoryForm">
+        Add Category
+      </button>
     </div>
 
     <!-- Add Category Form -->
@@ -126,19 +124,14 @@
     </div>
 
     <div class="col-md-12 mb-4" v-for="categoryData in categories" :key="categoryData.id" style="padding-bottom: 5vw">
-      <div class="container">
-        <div class="row mb-1 justify-content-between">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h4 class="mb-0">{{categoryData.categoryName}}</h4>
 
-          <div class="col col-auto me-1 align-self-center px-2">
-            <h4 class="mb-0">{{categoryData.categoryName}}</h4>
-          </div>
-          <button class="col col-1 btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
-
-          <div v-if="isOscar" class="col text-end">
-            <button class="btn btn-primary" @click="openAddPrizeForm(categoryData.id)">
-              Add Prize
-            </button>
-          </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
+          <button v-if="isOscar" class="btn btn-primary" @click="openAddPrizeForm(categoryData.id)">
+            Add Prize
+          </button>
         </div>
       </div>
 
@@ -150,22 +143,25 @@
                 <th class=text-left>Placement</th>
                 <th class=text-left>Name</th>
                 <th class=text-left>Handed Out?</th>
+                <th v-if="isOscar" class=text-center>Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="prizes.filter((p) => p.categoryId === categoryData.id).length === 0">
-                <td colspan=3 class="alert alert-info text-center">No prizes yet</td>
+                <td colspan=4 class="alert alert-info text-center">No prizes yet</td>
               </tr>
 
               <tr
                   v-for="prize in prizes
                       .filter(p => p.categoryId === categoryData.id)
-                      .sort((p1, p2) => p1.placement - p2.placement)"
-                  @click="openEditPrizeForm(prize.id)">
+                      .sort((p1, p2) => p1.placement - p2.placement)">
 
                 <td class=text-center>{{prize.placement}}</td>
                 <td class=text-center>{{prize.prizeName}}</td>
                 <td class=text-center>{{prize.handedOut? "Yes" : "No"}}</td>
+                <td v-if="isOscar" class=text-center>
+                  <button class="btn btn-sm btn-warning" @click="openEditPrizeForm(prize.id)">Edit</button>
+                </td>
               </tr>
             </tbody>
           </table>

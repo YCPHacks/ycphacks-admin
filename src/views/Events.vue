@@ -2,7 +2,9 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">All Events</h2>
     <!-- Create Event Button -->
-    <button v-if="UserRole ==='oscar'" @click="showCreateEventModal = true" class="btn btn-primary create-event-btn">Create Event</button>
+    <div v-if="UserRole ==='oscar'" class="page-actions">
+      <button @click="showCreateEventModal = true" class="btn btn-primary">Create Event</button>
+    </div>
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
@@ -11,7 +13,7 @@
         <div class="mb-4">
           <input type="text" v-model="searchQuery" class="form-control" placeholder="Search by event name..." />
         </div>
-        <table class="table table-striped table-hover">
+        <table class="table table-cards table-striped table-hover">
           <thead class="thead-light">
           <tr>
             <th class="text-left sortable" @click="sortBy('isActive')">
@@ -39,11 +41,11 @@
             <td colspan="4" class="text-center">No events</td>
           </tr>
           <tr v-for="event in sortedEvents" :key="event.id" style="text-align: center;">
-            <td>{{ event.isActive ? '✅' : '' }}</td>
-            <td>{{ event.eventName }}</td>
-            <td>{{ event.startDate }}</td>
-            <td>{{ event.endDate }}</td>
-            <td class="text-center">
+            <td data-label="Active?">{{ event.isActive ? '✅' : '' }}</td>
+            <td data-label="Event">{{ event.eventName }}</td>
+            <td data-label="Start Date">{{ event.startDate }}</td>
+            <td data-label="End Date">{{ event.endDate }}</td>
+            <td class="text-center card-actions">
               <button @click="openViewEventModal(event)" class="btn btn-info btn-sm me-2">View</button>
               <button v-if="UserRole ==='oscar'" class="btn btn-sm btn-warning" @click="openUpdateEventModal(event)">Edit</button>
               <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteEventModal(event)">Delete</button>
@@ -382,11 +384,6 @@ export default {
   position: relative;
 }
 
-.create-event-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-}
 
 .table-container {
   border-radius: 0.75rem;
