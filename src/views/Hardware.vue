@@ -1,22 +1,22 @@
 <template>
   <div class="container mt-5">
+    <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary add-hardware-btn">Import CSV File</button>
+  <button v-if="isOscar" type="button" class="btn btn-secondary" @click="exportHardwareCSV" :disabled="hardwareList.length === 0">
+    Export CSV File
+  </button>
+    <button @click="openAddModal" class="btn btn-primary add-hardware-btn">
+      Add Hardware
+    </button>
     <h2 class="mb-4 text-center">Hardware List</h2>
-
-    <div class="page-actions">
-      <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary">Import CSV File</button>
-
-      <button @click="openAddModal" class="btn btn-primary">
-        Add Hardware
-      </button>
-    </div>
 
 
     <div class="table-container shadow-lg rounded overflow-hidden mt-3">
       <div class="table-responsive">
-        <table class="table table-cards table-striped table-hover">
+        <table class="table table-striped table-hover">
           <thead class="table-dark">
           <tr>
             <th>Name</th>
+            <th>Hardware Type</th>
             <th>Image</th>
             <th>Serial Number</th>
             <th>Functional</th>
@@ -27,13 +27,14 @@
 
           <tbody>
           <tr v-if="hardwareList.length === 0">
-            <td colspan="6" class="text-center">No hardware available</td>
+            <td colspan="7" class="text-center">No hardware available</td>
           </tr>
 
           <tr v-for="hardware in hardwareList" :key="hardware.id">
-            <td data-label="Name">{{ hardware.name }}</td>
+            <td>{{ hardware.name }}</td>
+            <td>{{ hardware.hardwareTypeName || "N/A" }}</td>
 
-            <td data-label="Image">
+            <td>
               <img
                   v-if="hardware.imageUrl"
                   :src="hardware.imageUrl"
@@ -43,9 +44,9 @@
               <span v-else class="text-muted">No image</span>
             </td>
 
-            <td data-label="Serial Number">{{ hardware.serial }}</td>
+            <td>{{ hardware.serial }}</td>
 
-            <td data-label="Functional">
+            <td>
                 <span
                     class="badge"
                     :class="hardware.functional ? 'bg-success' : 'bg-danger'"
@@ -54,9 +55,9 @@
                 </span>
             </td>
 
-            <td data-label="Description">{{ hardware.description }}</td>
+            <td>{{ hardware.description }}</td>
 
-            <td class="text-center card-actions">
+            <td>
               <button
                   @click="editHardware(hardware)"
                   class="btn btn-warning btn-sm me-2"
@@ -99,8 +100,7 @@
   <select
     v-model="hardwareForm.hardwareTypeId"
     class="form-control"
-    :required="!newTypeName.trim()"
-    :disabled="!!newTypeName.trim()"
+    required
   >
     <option value="" disabled>Select type</option>
     <option
@@ -110,16 +110,18 @@
     >
       {{ type.name }}
     </option>
+    <option value="new">+ New Type</option>
   </select>
 
   <input
+    v-if="hardwareForm.hardwareTypeId === 'new'"
     v-model="newTypeName"
     class="form-control mt-2"
-    placeholder="Or enter a new type name"
+    placeholder="Enter a new type name"
+    required
   />
 
   <small>
-    Enter a new type name to create it, or select an existing type.
     Uploading a new image changes the image for every item of this type.
   </small>
 </div>
@@ -214,7 +216,6 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
-import { toast } from "@/utils/toast.js";
 
 export default {
   name: "HardwareTab",
@@ -285,6 +286,7 @@ export default {
         this.hardwareList = raw.map(item => ({
           id: item.hardwareId || item.id,
           name: item.hardwareName,
+          hardwareTypeName: item.hardwareType?.name || null,
           serial: item.serial,
           functional: item.functional ?? true,
           description: item.description || "",
@@ -371,7 +373,10 @@ export default {
         const newImageUrl = await this.uploadImageIfNeeded();
 
         let typeId = this.hardwareForm.hardwareTypeId;
-        if (this.newTypeName.trim()) {
+        if (typeId === "new") {
+        if (!this.newTypeName.trim()) {
+          throw new Error("Enter a name for the new hardware type");
+          }
           const { data } = await axios.post(`${store.state.apiBaseUrl}/hardware/types`, {
             name: this.newTypeName.trim(), imageUrl: newImageUrl
           });
@@ -412,11 +417,10 @@ export default {
         await this.fetchTypes();
         await this.fetchHardwareList();
         this.closeModal();
-        toast.success("Hardware saved");
 
       } catch (error) {
         console.error("Error saving hardware:", error);
-        toast.error(`Failed to save hardware: ${error.response?.data?.message || error.message}`);
+        alert('Failed to save hardware. Check console for details.');
       }
     },
 
@@ -429,10 +433,8 @@ export default {
         // but that requires a separate backend endpoint.
         await axios.delete(`${store.state.apiBaseUrl}/hardware/delete/${id}`);
         await this.fetchHardwareList();
-        toast.success("Hardware deleted");
       } catch (error) {
         console.error("Error deleting hardware:", error);
-        toast.error(`Failed to delete hardware: ${error.response?.data?.message || error.message}`);
       }
     },
 
@@ -466,21 +468,82 @@ export default {
 
       if (result.success) {
         await this.fetchHardwareList(); // Refresh hardware list
+        await this.fetchTypes(); // Refresh hardware types
         this.showImportCSVHardwareModal = false; // Close modal
         this.resetForm();
-        toast.success("Hardware imported");
       } else {
-        toast.error(result.message);
+        this.message = result.message;
       }
 
       this.loading = false;
-    }
-  },
+    },
+
+
+exportHardwareCSV() {
+  const headers = [
+    "Name",
+    "Hardware Type",
+    "Image",
+    "Serial Number",
+    "Functional",
+    "Description"
+  ];
+
+  const rows = this.hardwareList.map(hardware => {
+    const functional = hardware.functional;
+    const isNotFunctional = [false, 0, "0", "false", "no"].includes(
+      typeof functional === "string"
+        ? functional.trim().toLowerCase()
+        : functional
+    );
+
+    return [
+      hardware.name || "",
+      hardware.hardwareTypeName || "",
+      hardware.imageUrl || "",
+      hardware.serial || "<missing serial>",
+      isNotFunctional ? "No" : "Yes",
+      hardware.description || ""
+    ];
+  });
+
+  // Escape commas, quotes, and line breaks in CSV fields.
+  const escapeCSV = value =>
+    `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(escapeCSV).join(","))
+    .join("\r\n");
+
+  // Add a BOM for better Microsoft Excel compatibility.
+  const blob = new Blob(
+    ["\uFEFF" + csvContent],
+    { type: "text/csv;charset=utf-8;" }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "YCP-Hacks-Hardware-Inventory.csv";
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+  }
 };
 </script>
 
 <style scoped>
 /* Styles remain the same */
+.add-hardware-btn {
+  float: right;
+  margin-bottom: 10px;
+  margin-right: 20px;
+}
 
 .hardware-img {
   width: 80px;
