@@ -146,6 +146,8 @@ export default {
     return {
       showAllActivities: false,
       users: [],
+      participants: [],
+      permissions: [],
       hardware: [],
       teams: [],
       sponsors: [],
@@ -155,6 +157,7 @@ export default {
   async mounted() {
     await this.$store.dispatch('getActiveEvent'); 
     await this.fetchUsers();
+    await this.fetchPermissions();
     await this.fetchTeams();
     await this.fetchActivities();
     await this.fetchHardware();
@@ -198,21 +201,29 @@ export default {
 
       return numReservedHardware;
     },
+    /*
     registeredParticipantCount(){
-      return this.users.filter(user =>
-        user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar'
+      return this.participants.filter(participant =>
+        participant.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar'
       ).length;
+    },
+
+     */
+    registeredParticipantCount() {
+      return this.participants.filter(p => p.permission === 'participant').length;
     },
     allTally() {
       return this.calculateTally(this.users);
     },
     participantTally() {
-      const participants = this.users.filter(u => u.role.toLowerCase() === "participant");
+      const participants = this.participants.filter(participant =>
+          participant.permission.only(p => ['participant'].includes(p)))
       return this.calculateTally(participants);
     },
     staffTally() {
       // Assuming 'oscar' is also counted as staff
-      const staff = this.users.filter(u => u.role.toLowerCase() === "staff" || u.role.toLowerCase() === "oscar");
+      const staff = this.participants.filter(participant =>
+          participant.permission.some(p => ['staff', 'oscar'].includes(p)))
       return this.calculateTally(staff);
     },
     sortedActivities() {
@@ -245,6 +256,18 @@ export default {
         console.error("Error fetching users:", error);
       }
     },
+
+    async fetchPermissions() {
+      const eventId = this.activeEventId;
+
+      try {
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all/participant?eventId=${eventId}`);
+        this.permissions = response.data.data;
+      } catch (error) {
+        console.error("Error fetching permissions:", error);
+      }
+    },
+
     async fetchTeams() {
       const eventId = this.activeEventId;
       try {

@@ -113,6 +113,7 @@ export default createStore({
                 });
 
                 const data = await response.data;
+                commit("setPermission", data.permission);
                 const user = new UserAdapter(data.data);
                 commit("setUser", user);
 
