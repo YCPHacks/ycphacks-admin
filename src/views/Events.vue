@@ -2,7 +2,7 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">All Events</h2>
     <!-- Create Event Button -->
-    <button v-if="UserRole ==='oscar'" @click="showCreateEventModal = true" class="btn btn-primary create-event-btn">Create Event</button>
+    <button v-if="permission.includes('oscar')" @click="showCreateEventModal = true" class="btn btn-primary create-event-btn">Create Event</button>
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
@@ -45,8 +45,8 @@
             <td>{{ event.endDate }}</td>
             <td class="text-center">
               <button @click="openViewEventModal(event)" class="btn btn-info btn-sm me-2">View</button>
-              <button v-if="UserRole ==='oscar'" class="btn btn-sm btn-warning" @click="openUpdateEventModal(event)">Edit</button>
-              <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteEventModal(event)">Delete</button>
+              <button v-if="permission.includes('oscar')" class="btn btn-sm btn-warning" @click="openUpdateEventModal(event)">Edit</button>
+              <button v-if="permission.includes('oscar')" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteEventModal(event)">Delete</button>
             </td>
           </tr>
           </tbody>
@@ -71,7 +71,7 @@
     </div>
 
     <!-- Modal for Creating an Event -->
-    <div v-if="showCreateEventModal && UserRole === 'oscar'" class="modal-overlay">
+    <div v-if="showCreateEventModal && permission.includes('oscar')" class="modal-overlay">
       <div class="modal-content">
         <h3>Create Event</h3>
         <form @submit.prevent="createEvent">
@@ -116,7 +116,7 @@
     </div>
 
     <!-- Modal for Updating an Event -->
-    <div v-if="showUpdateEventModal && UserRole === 'oscar'" class="modal-overlay">
+    <div v-if="showUpdateEventModal && permission.includes('oscar')" class="modal-overlay">
       <div class="modal-content">
         <h3>Update Event</h3>
         <form @submit.prevent="updateEvent">
@@ -161,7 +161,7 @@
     </div>
 
     <!-- Modal for Deleting an Event -->
-    <div v-if="showDeleteEventModal && UserRole === 'oscar'" class="modal-overlay">
+    <div v-if="showDeleteEventModal && permission.includes('oscar')" class="modal-overlay">
       <div class="modal-content">
         <h5>Delete Event</h5>
         <form @submit.prevent="deleteEvent">
@@ -197,7 +197,7 @@
 import axios from 'axios';
 import router from "@/router/index.js";
 import store from "@/store/store.js";
-import { mapGetters } from "vuex";
+import {mapGetters, mapState} from "vuex";
 
 export default {
   name: "Events",
@@ -225,7 +225,8 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(['getEvents', 'UserRole']),
+    ...mapGetters(['getEvents']),
+    ...mapState(['permission']),
     sortedEvents() {
       if (!this.getEvents || this.getEvents.length === 0) return [];
 
