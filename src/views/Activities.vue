@@ -8,7 +8,7 @@
       </span>
     </h2>
     <!-- Import CSV Activities Button -->
-    <button v-if="isOscar" @click="showImportCSVActivityModal = true" class="btn btn-primary import-activity-btn">Import CSV File</button>
+    <button v-if="permission.includes('oscar')" @click="showImportCSVActivityModal = true" class="btn btn-primary import-activity-btn">Import CSV File</button>
 
     <!-- Create Activity Button -->
     <button @click="showCreateActivityModal = true" class="btn btn-primary create-activity-btn">Create Activity</button>
@@ -49,7 +49,7 @@
             <td class="text-center">{{ activity.activityDescription }}</td>
             <td class="text-center">
               <button class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
-              <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
+              <button v-if="permission.includes('oscar')" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
             </td>
           </tr>
           </tbody>
@@ -124,7 +124,7 @@
     </div>
 
     <!-- Modal for Deleting an Activity -->
-    <div v-if="showDeleteActivityModal && UserRole === 'oscar'" class="modal-overlay">
+    <div v-if="showDeleteActivityModal && permission.includes('oscar')" class="modal-overlay">
       <div class="modal-content">
         <h5>Delete Activity</h5>
         <form @submit.prevent="deleteActivity">
@@ -161,7 +161,7 @@
 import axios from 'axios';
 import router from "@/router/index.js";
 import store from "@/store/store.js";
-import { mapGetters } from "vuex";
+import {mapGetters, mapState} from "vuex";
 import { BDropdown } from "bootstrap-vue-3";
 
 export default {
@@ -191,12 +191,10 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(['getActivities', 'UserRole', 'getEvent', 'getEvents']),
+    ...mapGetters(['getActivities', 'getEvent', 'getEvents']),
+    ...mapState(['permission']),
     event() {
       return this.getEvent;
-    },
-    isOscar() {
-      return store.getters.UserRole === 'oscar';
     },
     sortedActivities() {
       if (!this.getActivities || this.getActivities.length === 0) return [];
