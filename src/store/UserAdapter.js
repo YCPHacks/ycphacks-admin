@@ -5,5 +5,6 @@ export default class UserAdapter {
         this.lastName = adapter.lastName || "house";
         this.email = adapter.email || "tinyhouse@gmail.com";
         this.token = adapter.token || "123";
+        this.notificationPreference_toast = adapter.notificationPreference_toast ?? true;
     }
 }

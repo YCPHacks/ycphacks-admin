@@ -1,16 +1,19 @@
 <template>
   <div class="container mt-5">
-    <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary add-hardware-btn">Import CSV File</button>
-
-    <button @click="openAddModal" class="btn btn-primary add-hardware-btn">
-      Add Hardware
-    </button>
     <h2 class="mb-4 text-center">Hardware List</h2>
+
+    <div class="page-actions">
+      <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary">Import CSV File</button>
+
+      <button @click="openAddModal" class="btn btn-primary">
+        Add Hardware
+      </button>
+    </div>
 
 
     <div class="table-container shadow-lg rounded overflow-hidden mt-3">
       <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table table-cards table-striped table-hover">
           <thead class="table-dark">
           <tr>
             <th>Name</th>
@@ -28,9 +31,9 @@
           </tr>
 
           <tr v-for="hardware in hardwareList" :key="hardware.id">
-            <td>{{ hardware.name }}</td>
+            <td data-label="Name">{{ hardware.name }}</td>
 
-            <td>
+            <td data-label="Image">
               <img
                   v-if="hardware.imageUrl"
                   :src="hardware.imageUrl"
@@ -40,9 +43,9 @@
               <span v-else class="text-muted">No image</span>
             </td>
 
-            <td>{{ hardware.serial }}</td>
+            <td data-label="Serial Number">{{ hardware.serial }}</td>
 
-            <td>
+            <td data-label="Functional">
                 <span
                     class="badge"
                     :class="hardware.functional ? 'bg-success' : 'bg-danger'"
@@ -51,9 +54,9 @@
                 </span>
             </td>
 
-            <td>{{ hardware.description }}</td>
+            <td data-label="Description">{{ hardware.description }}</td>
 
-            <td>
+            <td class="text-center card-actions">
               <button
                   @click="editHardware(hardware)"
                   class="btn btn-warning btn-sm me-2"
@@ -211,6 +214,7 @@
 <script>
 import axios from "axios";
 import store from "../store/store.js";
+import { toast } from "@/utils/toast.js";
 
 export default {
   name: "HardwareTab",
@@ -408,10 +412,11 @@ export default {
         await this.fetchTypes();
         await this.fetchHardwareList();
         this.closeModal();
+        toast.success("Hardware saved");
 
       } catch (error) {
         console.error("Error saving hardware:", error);
-        alert('Failed to save hardware. Check console for details.');
+        toast.error(`Failed to save hardware: ${error.response?.data?.message || error.message}`);
       }
     },
 
@@ -424,8 +429,10 @@ export default {
         // but that requires a separate backend endpoint.
         await axios.delete(`${store.state.apiBaseUrl}/hardware/delete/${id}`);
         await this.fetchHardwareList();
+        toast.success("Hardware deleted");
       } catch (error) {
         console.error("Error deleting hardware:", error);
+        toast.error(`Failed to delete hardware: ${error.response?.data?.message || error.message}`);
       }
     },
 
@@ -461,8 +468,9 @@ export default {
         await this.fetchHardwareList(); // Refresh hardware list
         this.showImportCSVHardwareModal = false; // Close modal
         this.resetForm();
+        toast.success("Hardware imported");
       } else {
-        this.message = result.message;
+        toast.error(result.message);
       }
 
       this.loading = false;
@@ -473,11 +481,6 @@ export default {
 
 <style scoped>
 /* Styles remain the same */
-.add-hardware-btn {
-  float: right;
-  margin-bottom: 10px;
-  margin-right: 20px;
-}
 
 .hardware-img {
   width: 80px;

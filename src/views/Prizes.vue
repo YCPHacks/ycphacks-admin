@@ -2,13 +2,11 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Prizes & Categories</h2>
 
-    <div class="d-flex justify-content-end gap-2 mb-3">
+    <div v-if="isOscar" class="page-actions">
       <!-- Add Category Button -->
-      <div v-if="isOscar" class="text-end mb-3">
-        <button class="btn btn-primary" @click="toggleAddCategoryForm">
-          Add Category
-        </button>
-      </div>
+      <button class="btn btn-primary" @click="toggleAddCategoryForm">
+        Add Category
+      </button>
     </div>
 
     <!-- Add Category Form -->
@@ -126,19 +124,14 @@
     </div>
 
     <div class="col-md-12 mb-4" v-for="categoryData in categories" :key="categoryData.id" style="padding-bottom: 5vw">
-      <div class="container">
-        <div class="row mb-1 justify-content-between">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h4 class="mb-0">{{categoryData.categoryName}}</h4>
 
-          <div class="col col-auto me-1 align-self-center px-2">
-            <h4 class="mb-0">{{categoryData.categoryName}}</h4>
-          </div>
-          <button class="col col-1 btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
-
-          <div v-if="isOscar" class="col text-end">
-            <button class="btn btn-primary" @click="openAddPrizeForm(categoryData.id)">
-              Add Prize
-            </button>
-          </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
+          <button v-if="isOscar" class="btn btn-primary" @click="openAddPrizeForm(categoryData.id)">
+            Add Prize
+          </button>
         </div>
       </div>
 
@@ -150,22 +143,25 @@
                 <th class=text-left>Placement</th>
                 <th class=text-left>Name</th>
                 <th class=text-left>Handed Out?</th>
+                <th v-if="isOscar" class=text-center>Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="prizes.filter((p) => p.categoryId === categoryData.id).length === 0">
-                <td colspan=3 class="alert alert-info text-center">No prizes yet</td>
+                <td colspan=4 class="alert alert-info text-center">No prizes yet</td>
               </tr>
 
               <tr
                   v-for="prize in prizes
                       .filter(p => p.categoryId === categoryData.id)
-                      .sort((p1, p2) => p1.placement - p2.placement)"
-                  @click="openEditPrizeForm(prize.id)">
+                      .sort((p1, p2) => p1.placement - p2.placement)">
 
                 <td class=text-center>{{prize.placement}}</td>
                 <td class=text-center>{{prize.prizeName}}</td>
                 <td class=text-center>{{prize.handedOut? "Yes" : "No"}}</td>
+                <td v-if="isOscar" class=text-center>
+                  <button class="btn btn-sm btn-warning" @click="openEditPrizeForm(prize.id)">Edit</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -181,6 +177,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useStore } from 'vuex';
+import { toast } from '@/utils/toast.js';
 
 const store = useStore();
 
@@ -441,6 +438,7 @@ const handleAddCategory = async () => {
     categories.value = resCategories === null ? [] : resCategories;
 
     showAddCategoryForm.value = false;
+    toast.success("Category added");
   }catch (err){
     addCategoryFormError.value = err || "Failed to add sponsor tier.";
   }
@@ -463,6 +461,7 @@ const handleAddPrize = async () => {
     prizes.value = resPrizes === null ? [] : resPrizes;
 
     showAddPrizeForm.value = false;
+    toast.success("Prize added");
   }catch (err){
     addPrizeFormError.value = err || "Failed to add sponsor tier.";
   }
@@ -483,6 +482,7 @@ const handleEditCategory = async (categoryId) => {
       await fetchCategories();
 
       showEditCategoryForm.value = false;
+      toast.success("Category updated");
   }catch (err){
       editCategoryFormError.value = err || "Failed to update category.";
   }
@@ -506,6 +506,7 @@ const handleEditPrize = async () => {
     await fetchPrizes();
 
     showEditPrizeForm.value = false;
+    toast.success("Prize updated");
   }catch (err){
     editPrizeFormError.value = err || "Failed to update prize.";
   }
@@ -517,8 +518,10 @@ const handleRemoveCategory = async () => {
     const idToDelete = currentEditCategory_Id.value;
     const deleteResp = await store.dispatch('deleteCategory', idToDelete);
 
-    if (!deleteResp.success)
+    if (!deleteResp.success) {
+      toast.error(deleteResp.message);
       return;
+    }
 
     const index = categories.value.findIndex((c) => c.id === idToDelete);
     if(index !== -1){
@@ -534,6 +537,7 @@ const handleRemoveCategory = async () => {
     currentEditCategory_EventId.value = null;
 
     showEditCategoryForm.value = false;
+    toast.success("Category deleted");
 
   } catch (err) {
       editCategoryFormError.value = err || "Failed to delete category due to a server error.";
@@ -545,8 +549,10 @@ const handleRemovePrize = async () => {
     const idToDelete = currentEditPrize_Id.value;
     const deleteResp = await store.dispatch('deletePrize', idToDelete);
 
-    if (!deleteResp.success)
+    if (!deleteResp.success) {
+      toast.error(deleteResp.message);
       return;
+    }
 
     const index = prizes.value.findIndex((c) => c.id === idToDelete);
     if(index !== -1) {
@@ -564,6 +570,7 @@ const handleRemovePrize = async () => {
     currentEditPrize_EventId.value = null;
 
     showEditPrizeForm.value = false;
+    toast.success("Prize deleted");
   } catch (err) {
     editPrizeFormError.value = err || "Failed to delete sponsor tier due to a server error.";
   }

@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
-import SideNav from '../../components/SideNav.vue';
+import TopNav from '../../components/TopNav.vue';
 import { RouterLinkStub } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest';
 
-describe('SideNav.vue', () => {
+describe('TopNav.vue', () => {
     const mockLogout = vi.fn(() => Promise.resolve());
     const mockRouterPush = vi.fn();
 
@@ -19,8 +19,8 @@ describe('SideNav.vue', () => {
             },
         });
 
-        //Create the SideNav
-        return mount(SideNav, {
+        //Create the TopNav
+        return mount(TopNav, {
             global: {
                 plugins: [store],
                 mocks: {
@@ -78,5 +78,39 @@ describe('SideNav.vue', () => {
         // Wait for next tick since logout is async
         await wrapper.vm.$nextTick();
         expect(mockRouterPush).toHaveBeenCalledWith('/login');
+    });
+
+    //The hamburger opens and closes the link panel
+    it('toggles the panel with the hamburger', async () => {
+        const wrapper = setup();
+        expect(wrapper.find('.nav-panel').classes()).not.toContain('open');
+
+        await wrapper.find('button.hamburger').trigger('click');
+        expect(wrapper.find('.nav-panel').classes()).toContain('open');
+
+        await wrapper.find('button.hamburger').trigger('click');
+        expect(wrapper.find('.nav-panel').classes()).not.toContain('open');
+    });
+
+    //Picking a page should close the panel so it doesn't cover the new page
+    it('closes the panel when a link is clicked', async () => {
+        const wrapper = setup();
+        await wrapper.find('button.hamburger').trigger('click');
+
+        await wrapper.find('.nav-links a').trigger('click');
+        expect(wrapper.find('.nav-panel').classes()).not.toContain('open');
+    });
+
+    it('closes the panel and the Menu when clicking outside the navbar', async () => {
+        const wrapper = setup();
+        await wrapper.find('button.hamburger').trigger('click');
+        await wrapper.find('button.menu-button').trigger('click');
+
+        document.body.click();
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.nav-panel').classes()).not.toContain('open');
+        expect(wrapper.find('.nav-menu').classes()).not.toContain('open');
+        wrapper.unmount();
     });
 });
