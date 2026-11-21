@@ -17,7 +17,7 @@
         <router-link to="/hardware" @click="closeMenus">Hardware</router-link>
         <router-link to="/sponsors" @click="closeMenus">Sponsors</router-link>
         <router-link to="/prizes" @click="closeMenus">Prizes</router-link>
-        <router-link to="/audit-logs" v-if="UserRole() === 'oscar'" @click="closeMenus">Audit Logs</router-link>
+        <router-link to="/audit-logs" v-if="permission.includes('oscar')" @click="closeMenus">Audit Logs</router-link>
       </div>
 
       <div class="nav-actions">
@@ -36,7 +36,7 @@
 </template>
 
 <script>
-import {mapActions, mapGetters} from 'vuex';
+import {mapActions, mapGetters, mapState} from 'vuex';
 
 export default {
   name: "TopNav",
@@ -48,6 +48,7 @@ export default {
     };
   },
   computed: {
+    ...mapState(['permission']),
     toastPreference() {
       return this.$store.state.user?.notificationPreference_toast ?? true;
     }
@@ -60,7 +61,6 @@ export default {
   },
   methods: {
     ...mapActions(['logout', 'updateToastPreference']),
-    ...mapGetters(['UserRole']),
     toggleNav() {
       this.isNavOpen = !this.isNavOpen;
     },

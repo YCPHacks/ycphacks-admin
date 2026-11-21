@@ -72,7 +72,7 @@
       <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="permission.includes('oscar')">
         Export Users
       </button>
-      
+      </div>
     </div>
 
     <!-- Search Input -->
