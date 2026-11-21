@@ -917,8 +917,34 @@ export default {
     },
     async handleUpdateUser(){
       this.editUserError = null;
+      console.log(this.editUserData);
 
       const userId = this.editUserData.id;
+      console.log(userId);
+
+      let participantId = null;
+
+      //TODO: editUserData.role should have the new permissions that we want to give to the user
+      // we should just be able to get the users participantId here using there userId
+      // think about how we will need to handling removing permissions from a participant
+      const eventId = this.activeEventId;
+
+      try {
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/${userId}/participant?eventId=${eventId}`);
+        participantId = response.data.participantId.id;
+
+        console.log("I am the participant id", participantId);
+      } catch (error) {
+        console.error("Error fetch participantId:", error);
+      }
+
+      // Set the new permissions and get rid of the old ones
+      const newPermissions = this.editUserData.role.map(r => r.toLowerCase());
+
+        await axios.put(`${store.state.apiBaseUrl}/user/${participantId}/permissions`, {
+          permissions: newPermissions
+        })
+
 
       const originalIsBanned = this.editUserOriginalData.isBanned;
       const newIsBanned = this.editUserData.isBanned;
