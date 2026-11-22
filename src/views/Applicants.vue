@@ -66,13 +66,13 @@
           </div>
         </div>
 
-      <button class="btn btn-primary mb-0 fw-bold" @click="showImportModal = true" v-if="isOscar">
-        Import CSV
-      </button>
-      <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="isOscar">
-        Export Users
-      </button>
-      
+        <button class="btn btn-primary mb-0 fw-bold" @click="showImportModal = true" v-if="isOscar">
+          Import CSV
+        </button>
+        <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="isOscar">
+          Export Users
+        </button>
+      </div>
     </div>
 
     <!-- Search Input -->

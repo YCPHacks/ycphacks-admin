@@ -112,7 +112,7 @@
             :key="activity.id"
         >
           <td>{{ activity.activityName }}</td>
-          <td>{{ activity.activityDate }}</td>
+          <td>{{ formatDateToEST(activity.activityDate) }}</td>
         </tr>
         </tbody>
       </table>
@@ -137,6 +137,7 @@ import store from "../store/store.js";
 import {mapGetters} from "vuex";
 import hardwareService from "../services/hardwareService.js";
 import {getSponsors} from "@/services/sponsorService.js";
+import { formatDateToEST } from "@/utils/formatDate.js";
 
 const SIZE_ORDER = ['S', 'M', 'L', 'XL', '2XL', '3XL', 'N/A'];
 
@@ -232,6 +233,7 @@ export default {
     }
   },
   methods: {
+    formatDateToEST,
     toggleActivities() {
       this.showAllActivities = !this.showAllActivities;
     },

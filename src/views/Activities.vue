@@ -37,18 +37,28 @@
               Description
               <span v-if="sortKey === 'activityDescription'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
             </th>
+            <th class="text-center">Discord</th>
             <th></th> <!-- For edit buttons -->
           </tr>
           </thead>
 
           <tbody>
           <tr v-if="getActivities.length === 0">
-            <td colspan="4" class="text-center">No activities</td>
+            <td colspan="5" class="text-center">No activities</td>
           </tr>
           <tr v-for="activity in sortedActivities" :key="activity.id">
             <td data-label="Activity" class="text-center">{{ activity.activityName }}</td>
-            <td data-label="Date" class="text-center">{{ activity.activityDate }}</td>
+            <td data-label="Date" class="text-center">{{ formatDateToEST(activity.activityDate) }}</td>
             <td data-label="Description" class="text-center">{{ activity.activityDescription }}</td>
+            <td data-label="Discord" class="text-center">
+              <i
+                class="bi"
+                :class="activity.notifyDiscord ? 'bi-bell-fill' : 'bi-bell-slash'"
+                role="img"
+                :title="activity.notifyDiscord ? 'Announced on Discord' : 'Not announced on Discord'"
+                :aria-label="activity.notifyDiscord ? 'Announced on Discord' : 'Not announced on Discord'"
+              ></i>
+            </td>
             <td class="text-center card-actions">
               <button class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
               <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
@@ -82,6 +92,12 @@
             <p v-if="errors.activityDescription" class="text-danger">{{ errors.activityDescription }}</p>
           </div>
 
+          <div class="form-check form-switch" style="margin-bottom: 10px">
+            <input type="checkbox" id="notifyDiscord" v-model="activityForm.notifyDiscord" class="form-check-input" role="switch" />
+            <label for="notifyDiscord" class="form-check-label">Announce on Discord</label>
+            <p v-if="errors.notifyDiscord" class="text-danger">{{ errors.notifyDiscord }}</p>
+          </div>
+
           <div class="modal-actions">
             <button type="submit" class="btn btn-success">Save</button>
             <button type="button" class="btn btn-secondary" @click="showCreateActivityModal = false; resetActivityForm()">Cancel</button>
@@ -113,6 +129,12 @@
             <label for="updateActivityDescription">Description</label>
             <textarea id="updateActivityDescription" v-model="activityForm.activityDescription" class="form-control" required></textarea>
             <p v-if="errors.activityDescription" class="text-danger">{{ errors.activityDescription }}</p>
+          </div>
+
+          <div class="form-check form-switch" style="margin-bottom: 10px">
+            <input type="checkbox" id="updateNotifyDiscord" v-model="activityForm.notifyDiscord" class="form-check-input" role="switch" />
+            <label for="updateNotifyDiscord" class="form-check-label">Announce on Discord</label>
+            <p v-if="errors.notifyDiscord" class="text-danger">{{ errors.notifyDiscord }}</p>
           </div>
 
           <div class="modal-actions">
@@ -165,6 +187,7 @@ import router from "@/router/index.js";
 import store from "@/store/store.js";
 import { mapGetters } from "vuex";
 import { BDropdown } from "bootstrap-vue-3";
+import { formatDateToEST } from "@/utils/formatDate.js";
 
 export default {
   name: "Activities",
@@ -183,9 +206,11 @@ export default {
         eventId: this.event?.id,
         activityName: '',
         activityDate: '',
-        activityDescription: ''
+        activityDescription: '',
+        notifyDiscord: true
       },
       file: null,
+      originalActivityDate: '',
       deleteActivityName: '',
       isLoading: false,
       errors: {},
@@ -233,6 +258,7 @@ export default {
     this.isLoading = false;
   },
   methods: {
+    formatDateToEST,
     async fetchActivities() {
       this.isLoading = true
       await store.dispatch('getAllActivities', this.event.id);
@@ -276,10 +302,14 @@ export default {
     async updateActivity() {
       this.isLoading = true;
 
+      // input drops seconds, so send the original or it'll ping again
+      const dateUnchanged = this.activityForm.activityDate === this.formatForDatetimeLocal(this.originalActivityDate);
+      const activityDate = dateUnchanged ? this.originalActivityDate : this.activityForm.activityDate;
+
       const activityToSend = {
         ...this.activityForm,
         eventId: this.event?.id,
-        activityDate: new Date(this.activityForm.activityDate).toISOString()
+        activityDate: new Date(activityDate).toISOString()
       };
       const result = await store.dispatch('updateActivity', activityToSend);
 
@@ -322,6 +352,7 @@ export default {
           .slice(0, 16); // keeps "YYYY-MM-DDTHH:mm"
     },
     openUpdateActivityModal(activity) {
+      this.originalActivityDate = activity.activityDate;
       this.activityForm = {
         ...activity,
         activityDate: this.formatForDatetimeLocal(activity.activityDate)
@@ -339,7 +370,8 @@ export default {
         eventId: 1,
         activityName: '',
         activityDate: '',
-        activityDescription: ''
+        activityDescription: '',
+        notifyDiscord: true
       };
     },
 
@@ -398,11 +430,16 @@ export default {
 
 .table th:nth-child(3),
 .table td:nth-child(3) {
-  width: 45%; /* Description column */
+  width: 37%; /* Description column */
 }
 
 .table th:nth-child(4),
 .table td:nth-child(4) {
+  width: 8%; /* Discord column */
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
   width: 15%; /* Edit button column */
 }
 

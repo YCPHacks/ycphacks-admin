@@ -200,14 +200,8 @@ export default createStore({
                 if (!eventId) return;
                 const response = await axios.get(`${state.apiBaseUrl}/event/activity/${eventId}`);
 
-                // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
-                const activities = response.data.activities.map(activity => {
-                    activity.activityDate = formatDateToEST(activity.activityDate);
-
-                    return activity;
-                });
-
-                commit("setActivities", activities);
+                // keep the real date so editing doesn't mess up the time, pages format it
+                commit("setActivities", response.data.activities);
                 return {success: true, message: response.data.message};
             } catch (error) {
                 return {success: false, message: error.response?.data?.message || "Error fetching activity"};
