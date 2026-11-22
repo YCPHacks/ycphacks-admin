@@ -164,7 +164,7 @@
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="showDeleteActivityModal = false;">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showDeleteActivityModal = false; resetActivityForm()">Cancel</button>
             <button type="submit" class="btn btn-danger" :disabled="!activityForm.activityName || activityForm.activityName !== deleteActivityName">Delete</button>
           </div>
         </form>
@@ -365,6 +365,8 @@ export default {
       this.showDeleteActivityModal = true;
     },
     resetActivityForm() {
+      this.errors = {};
+      this.message = '';
       this.activityForm = {
         id: null,
         eventId: 1,

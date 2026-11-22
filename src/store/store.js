@@ -159,7 +159,7 @@ export default createStore({
                     success: true, message: data.message || "Activity created successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to create activity" };
+                return { success: false, message: error.response?.data?.message || "Failed to create activity", errors: error.response?.data?.errors || {} };
             }
         },
         async updateActivity({ commit, state }, activity) {
@@ -175,7 +175,7 @@ export default createStore({
                     success: true, message: data.message || "Activity updated successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to update activity" };
+                return { success: false, message: error.response?.data?.message || "Failed to update activity", errors: error.response?.data?.errors || {} };
             }
         },
         async deleteActivity({ commit, state }, id) {
@@ -192,7 +192,7 @@ export default createStore({
                     success: true, message: data.message || "Activity deleted successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to delete activity" };
+                return { success: false, message: error.response?.data?.message || "Failed to delete activity", errors: error.response?.data?.errors || {} };
             }
         },
         async getAllActivities({ commit, state }, eventId) {
