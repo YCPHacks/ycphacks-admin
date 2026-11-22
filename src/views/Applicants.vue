@@ -337,9 +337,7 @@
                 No users found
               </td>
             </tr>
-            <tr v-for="(user, index) in filteredUsers" :key="user.id"
-              @click="openEditUserForm(index)"
-              style="{ cursor: pointer; }">
+            <tr v-for="(user, index) in filteredUsers" :key="user.id">
 
               <td data-label="Banned" class="text-center align-middle" style="width: 1px">
                 <span v-if="user.isBanned" class="text-danger fs-4" title="BANNED USER">
