@@ -12,7 +12,7 @@
       <button v-if="isOscar" @click="showImportCSVActivityModal = true" class="btn btn-primary">Import CSV File</button>
 
       <!-- Create Activity Button -->
-      <button @click="showCreateActivityModal = true" class="btn btn-primary">Create Activity</button>
+      <button v-if="isOscar" @click="showCreateActivityModal = true" class="btn btn-primary">Create Activity</button>
     </div>
 
     <!-- Table Section -->
@@ -38,13 +38,13 @@
               <span v-if="sortKey === 'activityDescription'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span>
             </th>
             <th class="text-center">Discord</th>
-            <th></th> <!-- For edit buttons -->
+            <th v-if="isOscar"></th> <!-- For edit buttons -->
           </tr>
           </thead>
 
           <tbody>
           <tr v-if="getActivities.length === 0">
-            <td colspan="5" class="text-center">No activities</td>
+            <td :colspan="isOscar ? 5 : 4" class="text-center">No activities</td>
           </tr>
           <tr v-for="activity in sortedActivities" :key="activity.id">
             <td data-label="Activity" class="text-center">{{ activity.activityName }}</td>
@@ -59,9 +59,9 @@
                 :aria-label="activity.notifyDiscord ? 'Announced on Discord' : 'Not announced on Discord'"
               ></i>
             </td>
-            <td class="text-center card-actions">
+            <td v-if="isOscar" class="text-center card-actions">
               <button class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
-              <button v-if="UserRole === 'oscar'" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
+              <button class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
             </td>
           </tr>
           </tbody>
