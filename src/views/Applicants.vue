@@ -220,26 +220,34 @@
               
               <div class="mb-3" v-if="permission.includes('oscar')">
                 <label for="editRole" class="form-label">Role</label>
-                
-                <select 
-                  class="form-select" 
-                  id="editRole" 
-                  v-model="editUserData.role"
-                  multiple
-                >
-                  <option 
-                      v-for="role in userRoles"
+
+                <div class="role-picker">
+                  <div
+                      v-for="role in selectableRoles"
                       :key="role.value"
-                      :value="role.value"
+                      class="form-check"
+                      :class="{ 'role-sub': role.requiresStaff }"
                   >
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        :id="'role-' + role.value"
+                        :checked="editUserData.role.includes(role.value)"
+                        :disabled="role.requiresStaff && !hasStaffRole"
+                        @change="toggleRole(role.value, $event.target.checked)"
+                    >
+                    <label
+                        class="form-check-label"
+                        :class="{ 'text-muted': role.requiresStaff && !hasStaffRole }"
+                        :for="'role-' + role.value"
+                    >
                       {{ role.text }}
-                  </option>
-                </select>
+                    </label>
+                  </div>
+                  <div class="form-text">Sub-roles require Staff to be selected first</div>
+                </div>
                 <div v-if="revertMessage" class="alert alert-danger mt-2" role="alert">
                   {{ revertMessage }}
-                </div>
-                <div v-else-if="isPrivilegedRole(editUserData.role) && isYorkCollegeUser" class="alert alert-warning mt-2" role="alert">
-                  Role change to '{{ editUserData.role }}' is permitted for York College users.
                 </div>
               </div>
 
@@ -514,11 +522,10 @@ export default {
         { value: "3XL", text: '3XL' }
       ],
       userRoles: [
-        { value: 'PARTICIPANT', text: 'Participant' },
         { value: 'STAFF', text: 'Staff' },
-        { value: 'STAFF-USER-MANAGEMENT-EDIT', text: 'User Management'},
-        { value: 'STAFF-TEAM-REGISTRATION-EDIT', text: 'Team Management'},
-        { value: 'STAFF-HARDWARE-EDIT', text: 'Hardware Management'},
+        { value: 'STAFF-USER-MANAGEMENT-EDIT', text: 'User Management', requiresStaff: true },
+        { value: 'STAFF-TEAM-REGISTRATION-EDIT', text: 'Team Management', requiresStaff: true },
+        { value: 'STAFF-HARDWARE-EDIT', text: 'Hardware Management', requiresStaff: true },
         { value: 'OSCAR', text: 'Oscar' }
       ],
 
@@ -542,6 +549,13 @@ export default {
   },
   computed: {
     ...mapState(['permission']),
+
+    selectableRoles() {
+      return this.userRoles;
+    },
+    hasStaffRole() {
+      return (this.editUserData.role || []).includes('STAFF');
+    },
 
     activeEventId(){
       return this.$store.state.event?.id;
@@ -647,6 +661,24 @@ export default {
       }
     },
 
+    toggleRole(value, checked) {
+      const current = new Set(this.editUserData.role || []);
+
+      if (checked) {
+        current.add(value);
+      } else {
+        current.delete(value);
+        // Unchecking Staff also clears every staff sub-role
+        if (value === 'STAFF') {
+          this.userRoles
+              .filter(r => r.requiresStaff)
+              .forEach(r => current.delete(r.value));
+        }
+      }
+
+      this.editUserData.role = [...current];
+    },
+
     /* Actions that will be preformed if a QR code is detected */
     async QRDetect(codes){
       // Pause the scanner to process the QR code
@@ -701,7 +733,9 @@ export default {
     },
 
     getRoleLabel(role) {
-      const match = this.userRoles.find(r => r.value === String(role).toUpperCase());
+      const key = String(role).toUpperCase();
+      if (key === 'PARTICIPANT') return 'Participant';
+      const match = this.userRoles.find(r => r.value === key);
       return match ? match.text : role;
     },
 
@@ -1065,7 +1099,10 @@ export default {
       }
 
       // Set the new permissions and get rid of the old ones
-      const newPermissions = this.editUserData.role.map(r => r.toLowerCase());
+      const newPermissions = [...new Set([
+        'participant',
+        ...this.editUserData.role.map(r => r.toLowerCase()),
+      ])];
 
         await axios.put(`${store.state.apiBaseUrl}/user/${participantId}/permissions`, {
           permissions: newPermissions
@@ -1354,6 +1391,16 @@ table tbody tr td.table-checkbox-center .form-check-input{
 .scanner-camera {
   width: 100%;
   height: 300px;
+}
+
+.role-picker {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.role-picker .role-sub {
+  margin-left: 1.5rem;
 }
 
 /* Matches the size tallies. The light tint keeps it from reading as a button */
