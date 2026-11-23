@@ -351,14 +351,14 @@
               <!-- Add Check Boxes for Check in -->
               <td data-label="Role" v-if="activeTab === 'all'" class="role-column">
                 <div class="role-badge-wrapper">
-                  <span
-                      v-for="perm in user.permissions"
-                      :key="perm"
-                      class="badge role-badge text-center"
-                      :class="getRoleBadgeClass(perm)"
-                  >
-                    {{ perm }}
-                  </span>
+                 <span
+                     v-for="perm in user.permissions"
+                     :key="perm"
+                     class="badge role-badge text-center"
+                     :class="getRoleBadgeClass(perm)"
+                 >
+                  {{ getRoleLabel(perm) }}
+                </span>
                 </div>
               </td>
               <td data-label="Checked In?" class="text-center align-middle table-checkbox-center" v-if="activeTab === 'participant'">
@@ -516,9 +516,9 @@ export default {
       userRoles: [
         { value: 'PARTICIPANT', text: 'Participant' },
         { value: 'STAFF', text: 'Staff' },
-        { value: 'STAFF-USER-MANAGEMENT-EDIT', text: 'Staff-User-Management-Edit'},
-        { value: 'STAFF-TEAM-REGISTRATION-EDIT', text: 'Staff-Team-Registration-Edit'},
-        { value: 'STAFF-HARDWARE-EDIT', text: 'Staff-Hardware-Edit'},
+        { value: 'STAFF-USER-MANAGEMENT-EDIT', text: 'User Management'},
+        { value: 'STAFF-TEAM-REGISTRATION-EDIT', text: 'Team Management'},
+        { value: 'STAFF-HARDWARE-EDIT', text: 'Hardware Management'},
         { value: 'OSCAR', text: 'Oscar' }
       ],
 
@@ -698,6 +698,11 @@ export default {
         console.error("Validation failed:", err);
         toast.error("Server error validating QR");
       }
+    },
+
+    getRoleLabel(role) {
+      const match = this.userRoles.find(r => r.value === String(role).toUpperCase());
+      return match ? match.text : role;
     },
 
     /* Open the Scanner modal window */
@@ -1165,15 +1170,15 @@ export default {
 
 .table thead th.role-column-header{
   /* Apply shrink-wrap to header */
-  width: 130px;
+  width: 160px;
   white-space: nowrap;
   text-align: center;
-  max-width: 130px;
+  max-width: 160px;
 }
 
 .table tbody tr td.role-column {
-  width: 130px;
-  max-width: 130px;
+  width: 160px;
+  max-width: 160px;
   padding: 0.3rem 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -1190,8 +1195,8 @@ export default {
 }
 
 .role-badge-wrapper {
-  width: 130px;
-  max-width: 130px;
+  width: 160px;
+  max-width: 160px;
   display: flex;
   row-gap: 4px;
   flex-direction: column;
