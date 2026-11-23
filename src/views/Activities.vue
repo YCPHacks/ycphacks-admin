@@ -12,7 +12,7 @@
     <button v-if="permission.includes('oscar')" @click="showImportCSVActivityModal = true" class="btn btn-primary import-activity-btn">Import CSV File</button>
 
       <!-- Create Activity Button -->
-      <button @click="showCreateActivityModal = true" class="btn btn-primary">Create Activity</button>
+      <button v-if="permission.includes('oscar')" @click="showCreateActivityModal = true" class="btn btn-primary">Create Activity</button>
     </div>
 
     <!-- Table Section -->
@@ -50,7 +50,7 @@
             <td data-label="Date" class="text-center">{{ activity.activityDate }}</td>
             <td data-label="Description" class="text-center">{{ activity.activityDescription }}</td>
             <td class="text-center card-actions">
-              <button class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
+              <button v-if="permission.includes('oscar')" class="btn btn-sm btn-warning" @click="openUpdateActivityModal(activity)">Edit</button>
               <button v-if="permission.includes('oscar')" class="btn btn-sm btn-danger" style="margin-left: 0.5rem;" @click="openDeleteActivityModal(activity)">Delete</button>
             </td>
           </tr>

@@ -171,7 +171,7 @@ export default {
       return this.$store.state.event?.id;
     },
     checkedInCount(){
-      return this.users.filter(user => user.checkIn && user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar').length;
+      return this.users.filter(user => user.checkIn).length;
     },
     sponsorCount() {
       return this.sponsors.length;
@@ -210,7 +210,12 @@ export default {
 
      */
     registeredParticipantCount() {
-      return this.participants.filter(p => p.permission === 'participant').length;
+      const participantCount = new Set(
+          this.permissions
+              .filter(p => p.permission === 'participant')
+              .map(p => p.participantId)
+      ).size;
+      return participantCount;
     },
     allTally() {
       return this.calculateTally(this.users);
@@ -263,6 +268,7 @@ export default {
       try {
         const response = await axios.get(`${store.state.apiBaseUrl}/user/all/participant?eventId=${eventId}`);
         this.permissions = response.data.data;
+        console.log(this.permissions);
       } catch (error) {
         console.error("Error fetching permissions:", error);
       }

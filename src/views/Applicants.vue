@@ -362,9 +362,9 @@
                 </div>
               </td>
               <td data-label="Checked In?" class="text-center align-middle table-checkbox-center" v-if="activeTab === 'participant'">
-                <input 
+                <input
                   type="checkbox" 
-                  :checked="user.checkIn" 
+                  :checked="user.checkIn"
                   @change="toggleCheckIn(user.id)"
                   class="form-check-input"
                 >
@@ -889,6 +889,12 @@ export default {
     },
 
     async toggleCheckIn(userId){
+      const allowed = ['oscar', 'staff-user-management-edit'];
+      const canToggle = allowed.some(p => this.permission?.includes(p));
+      if (!canToggle) {
+        console.warn('You do not have permission to change check-in status.');
+        return;
+      }
       // console.log('Attempting to toggle check-in for ID:', userId);
       const userIdNumber = Number(userId);
       const user = this.users.find(u => u.id === userIdNumber);
