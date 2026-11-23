@@ -221,15 +221,28 @@ export default {
       return this.calculateTally(this.users);
     },
     participantTally() {
-      const participants = this.participants.filter(participant =>
-          participant.permission.only(p => ['participant'].includes(p)))
-      return this.calculateTally(participants);
+      const list = this.participantGroups.filter(g =>
+          g.perms.includes('participant') &&
+          !g.perms.some(p => ['staff', 'oscar'].includes(p))
+      );
+      return this.calculateTally(list);
+    },
+    participantGroups() {
+      const groups = new Map();
+      for (const p of this.permissions) {
+        if (!groups.has(p.participantId)) {
+          groups.set(p.participantId, { tShirtSize: p.tShirtSize, perms: [] });
+        }
+        groups.get(p.participantId).perms.push(p.permission);
+      }
+      return [...groups.values()];
     },
     staffTally() {
-      // Assuming 'oscar' is also counted as staff
-      const staff = this.participants.filter(participant =>
-          participant.permission.some(p => ['staff', 'oscar'].includes(p)))
-      return this.calculateTally(staff);
+      // 'oscar' counts as staff
+      const list = this.participantGroups.filter(g =>
+          g.perms.some(p => ['staff', 'oscar'].includes(p))
+      );
+      return this.calculateTally(list);
     },
     sortedActivities() {
       if (!this.getActivities?.length) return [];
