@@ -8,7 +8,14 @@
       Add Hardware
     </button>
     <h2 class="mb-4 text-center">Hardware List</h2>
-
+    <div class="mb-3" style="max-width: 350px;">
+      <input
+      v-model="typeSearch"
+      type="search"
+      class="form-control"
+      placeholder="Search hardware by type..."
+      />
+    </div>
 
     <div class="table-container shadow-lg rounded overflow-hidden mt-3">
       <div class="table-responsive">
@@ -26,11 +33,13 @@
           </thead>
 
           <tbody>
-          <tr v-if="hardwareList.length === 0">
-            <td colspan="7" class="text-center">No hardware available</td>
+          <tr v-if="filteredHardwareList.length === 0">
+            <td colspan="7" class="text-center">
+              {{ typeSearch ? "No hardware matches your search" : "No hardware available" }}
+            </td>
           </tr>
 
-          <tr v-for="hardware in hardwareList" :key="hardware.id">
+          <tr v-for="hardware in filteredHardwareList" :key="hardware.id">
             <td>{{ hardware.name }}</td>
             <td>{{ hardware.hardwareTypeName || "N/A" }}</td>
 
@@ -223,6 +232,7 @@ export default {
   data() {
     return {
       hardwareList: [],
+      typeSearch: "",
       hardwareTypes: [],
       newTypeName: "",
       showHardwareModal: false,
@@ -259,6 +269,19 @@ export default {
     },
     isOscar() {
       return store.getters.UserRole === 'oscar';
+    },
+    filteredHardwareList() {
+      const search = this.typeSearch.toLowerCase().trim();
+
+      if (!search) {
+        return this.hardwareList;
+      }
+
+      return this.hardwareList.filter(hardware =>
+        (hardware.hardwareTypeName || "")
+          .toLowerCase()
+          .includes(search)
+      );
     }
   },
 
