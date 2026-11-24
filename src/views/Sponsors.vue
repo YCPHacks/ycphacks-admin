@@ -48,27 +48,6 @@
             <label class="form-label">Lower Threshold</label>
             <input v-model="addLowerThreshold" type="number" class="form-control" required/>
           </div>
-          <div class="mb-2">
-            <label class="form-label">Image Specs (Width x Height)</label>
-            <div class="col-6">
-              <input 
-                type="number"
-                class="form-control"
-                placeholder="Width (px)"
-                v-model="addImageWidth"
-                required
-              />
-            </div>
-            <div class="col-6">
-              <input 
-                type="number"
-                class="form-control"
-                placeholder="Height (px)"
-                v-model="addImageHeight"
-                required
-              />
-            </div>
-          </div>
           <div class="d-flex justify-content-end gap-2 mt-3">
             <button type="button" class="btn btn-secondary" @click="cancelAddTier">
               Cancel
@@ -259,27 +238,6 @@
             <label class="form-label">Minimum Donation Amount ($)</label>
             <input v-model.number="editTierLowerThreshold" type="number" class="form-control" required min="0" />
           </div>
-          <div class="mb-2">
-            <label class="form-label">Image Specs (Width x Height)</label>
-            <div class="col-6">
-              <input 
-                type="number"
-                class="form-control"
-                placeholder="Width (px)"
-                v-model="editImageWidth" required
-                min="1"
-              />
-            </div>
-            <div class="col-6">
-              <input 
-                type="number"
-                class="form-control"
-                placeholder="Height (px)"
-                v-model="editImageHeight" required
-                min="1"
-              />
-            </div>
-          </div>
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="btn btn-secondary" @click="cancelEditTier">
               Cancel
@@ -396,8 +354,6 @@ const showAddForm = ref(false);
 const showRemoveForm = ref(false);
 
 // Add Sponsor Tier Variables
-const addImageHeight = ref(null);
-const addImageWidth = ref(null);
 const addTierName = ref("");
 const showAddTierForm = ref(false);
 const addLowerThreshold = ref(null);
@@ -409,8 +365,6 @@ const currentEditTierId = ref(null);
 const editTierName = ref("");
 const editTierLowerThreshold = ref(null);
 const editTierFormError = ref(null);
-const editImageHeight = ref(null);
-const editImageWidth = ref(null);
 
 // Error State Variables
 const addFormError = ref(null);
@@ -555,8 +509,6 @@ const tierRanges = computed(() => {
       range: `${lowerThreshold} - ${higherThreshold}`, 
       id: currentTier.id, 
       lowerThreshold: lower,
-      imageWidth: currentTier.width, 
-      imageHeight: currentTier.height,
     });
   }
   return result;
@@ -715,8 +667,6 @@ const fetchSponsorsAndTiers = async () => {
           tier: s.tier || "",
           sponsorTierId: s.tierId || null,
           imageUrl: s.imageUrl || "",
-          imageWidth: s.imageWidth ?? null,
-          imageHeight: s.imageHeight ?? null,   
         }))
       : [];
 
@@ -758,8 +708,6 @@ const toggleAddTierForm = async () => {
   showAddTierForm.value = !showAddTierForm.value;
   addTierName.value = '';
   addLowerThreshold.value = null;
-  addImageHeight.value = null;
-  addImageWidth.value = null;
   addTierFormError.value = null;
 };
 
@@ -859,8 +807,6 @@ const handleAddSponsor = async () => {
           tier: s.tier || "",
           sponsorTierId: s.tierId || null,
           imageUrl: s.imageUrl || "",
-          imageWidth: s.imageWidth ?? null,
-          imageHeight: s.imageHeight ?? null,
         }))
       : [];
 
@@ -922,24 +868,15 @@ const handleAddTier = async () => {
   }
 
   const threshold = Number(addLowerThreshold.value); 
-  if(isNaN(threshold) || threshold < 0){
-    addTierFormError.value = "Lower Threshold must be a valid, non-negative number.";
-    return;
-  }
-
-  const width = Number(addImageWidth.value);
-  const height = Number(addImageHeight.value);
-  if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
-    addTierFormError.value = "Image Width and Height must be positive numbers.";
+  if(isNaN(threshold) || threshold < 0){
+    addTierFormError.value = "Lower Threshold must be a valid, non-negative number.";
     return;
   }
 
   try{
     await addSponsorTier({
       tier: addTierName.value,
-      lowerThreshold: threshold,
-      width: width,
-      height: height
+      lowerThreshold: threshold
     });
 
     const resTiers = await getSponsorTiers();
@@ -958,10 +895,7 @@ const openEditTierForm = (tierData) => {
   currentEditTierId.value = tierData.id;
   editTierName.value = tierData.tier;
   editTierLowerThreshold.value = tierData.lowerThreshold;
-  
-  editImageWidth.value = tierData.imageWidth; 
-  editImageHeight.value = tierData.imageHeight;
-  
+
   showEditTierForm.value = true;
   selectedImage.value = false;
 };
@@ -977,20 +911,15 @@ const handleUpdateTier = async () => {
 
     const threshold = Number(editTierLowerThreshold.value);
     
-    const imageWidth = Number(editImageWidth.value);
-    const imageHeight = Number(editImageHeight.value);
-    
-    if(!editTierName.value || isNaN(threshold) || threshold < 0 || isNaN(imageWidth) || imageWidth <= 0 || isNaN(imageHeight) || imageHeight <= 0){
-      editTierFormError.value = "All fields must be valid. Tier Name cannot be empty. Threshold must be non-negative. Image dimensions must be positive numbers.";
+    if(!editTierName.value || isNaN(threshold) || threshold < 0){
+      editTierFormError.value = "All fields must be valid. Tier Name cannot be empty. Threshold must be non-negative.";
       return;
     }
 
     try{
       await updateSponsorTier(currentEditTierId.value, {
         tier: editTierName.value,
-        lowerThreshold: threshold,
-        width: imageWidth,
-        height: imageHeight
+        lowerThreshold: threshold
       });
 
       await fetchSponsorsAndTiers();
@@ -1014,14 +943,14 @@ const removeSponsorTiers = async () => {
   }
 
   try {
-    const idToDelete = TierToRemove.id;
-  
-    await removeSponsorTier(idToDelete);
+    const idToDelete = TierToRemove.id;
 
-    const index = tiers.value.findIndex((t) => t.id === idToDelete);
-    if(index !== -1){
-      tiers.value.splice(index, 1);
-    }
+    await removeSponsorTier(idToDelete);
+
+    const index = tiers.value.findIndex((t) => t.id === idToDelete);
+    if(index !== -1){
+      tiers.value.splice(index, 1);
+    }
     
     const resTiers = await getSponsorTiers();
     tiers.value = Array.isArray(resTiers.data) ? resTiers.data : [];
@@ -1074,8 +1003,8 @@ const handleUpdateSponsor = async () => {
 
   const tierValidationMessage = validateTierAmount(editAmount.value, editTier.value);
   if (tierValidationMessage) {
-      editFormError.value = tierValidationMessage;
-      return;
+      editFormError.value = tierValidationMessage;
+      return;
   }
 
   if (!editFile.value) {
