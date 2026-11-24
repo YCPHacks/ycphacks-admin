@@ -44,7 +44,7 @@
 
       <div class="tally-actions">
         <!-- Qr Code Scanner -->
-        <button @click=openScanner class="btn btn-success mb-0 fw-bold">
+        <button v-if="permission.includes('oscar') || permission.includes('staff-user-management-edit')" @click=openScanner class="btn btn-success mb-0 fw-bold">
           Scan User QR Code
         </button>
 
