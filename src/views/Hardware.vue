@@ -4,7 +4,7 @@
   <button v-if="permission.includes('oscar') || permission.includes('staff-hardware-edit')" type="button" class="btn btn-secondary" @click="exportHardwareCSV" :disabled="hardwareList.length === 0">
     Export CSV File
   </button>
-    <button @click="openAddModal" class="btn btn-primary add-hardware-btn">
+    <button v-if="permission.includes('oscar') || permission.includes('staff-hardware-edit')" @click="openAddModal" class="btn btn-primary add-hardware-btn">
       Add Hardware
     </button>
     <h2 class="mb-4 text-center">Hardware List</h2>
