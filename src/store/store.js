@@ -167,7 +167,7 @@ export default createStore({
                     success: true, message: data.message || "Activity created successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to create activity" };
+                return { success: false, message: error.response?.data?.message || "Failed to create activity", errors: error.response?.data?.errors || {} };
             }
         },
         async updateActivity({ commit, state }, activity) {
@@ -183,7 +183,7 @@ export default createStore({
                     success: true, message: data.message || "Activity updated successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to update activity" };
+                return { success: false, message: error.response?.data?.message || "Failed to update activity", errors: error.response?.data?.errors || {} };
             }
         },
         async deleteActivity({ commit, state }, id) {
@@ -200,7 +200,7 @@ export default createStore({
                     success: true, message: data.message || "Activity deleted successfully"
                 }
             } catch (error) {
-                return { success: false, message: error.response?.data?.message, error: error.response?.data?.errors || "Failed to delete activity" };
+                return { success: false, message: error.response?.data?.message || "Failed to delete activity", errors: error.response?.data?.errors || {} };
             }
         },
         async getAllActivities({ commit, state }, eventId) {
@@ -208,14 +208,8 @@ export default createStore({
                 if (!eventId) return;
                 const response = await axios.get(`${state.apiBaseUrl}/event/activity/${eventId}`);
 
-                // Convert dates from UTC to local time (i.e., EST) and to a user-friendly format
-                const activities = response.data.activities.map(activity => {
-                    activity.activityDate = formatDateToEST(activity.activityDate);
-
-                    return activity;
-                });
-
-                commit("setActivities", activities);
+                // keep the real date so editing doesn't mess up the time, pages format it
+                commit("setActivities", response.data.activities);
                 return {success: true, message: response.data.message};
             } catch (error) {
                 return {success: false, message: error.response?.data?.message || "Error fetching activity"};

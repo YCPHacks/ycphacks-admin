@@ -542,7 +542,7 @@ export default {
     };
   },
   async mounted() {
-    await this.$store.dispatch('getActiveEvent'); 
+    await this.$store.dispatch('getActiveEvent');
     await this.fetchUsers();
     await this.fetchPermissions();
     console.log(this.permissions);
