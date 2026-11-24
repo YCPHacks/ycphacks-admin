@@ -3,9 +3,9 @@
     <h2 class="mb-4 text-center">Hardware List</h2>
 
     <div class="page-actions">
-      <button v-if="isOscar" @click="showImportCSVHardwareModal = true" class="btn btn-primary">Import CSV File</button>
+      <button v-if="permission.includes('oscar') || permission.includes('staff-hardware-edit')" @click="showImportCSVHardwareModal = true" class="btn btn-primary">Import CSV File</button>
 
-      <button @click="openAddModal" class="btn btn-primary">
+      <button v-if="permission.includes('oscar') || permission.includes('staff-hardware-edit')" @click="openAddModal" class="btn btn-primary">
         Add Hardware
       </button>
     </div>
@@ -58,12 +58,14 @@
 
             <td class="text-center card-actions">
               <button
+                  v-if="permission.includes('oscar') || permission.includes('staff-hardware-edit')"
                   @click="editHardware(hardware)"
                   class="btn btn-warning btn-sm me-2"
               >
                 Edit
               </button>
               <button
+                  v-if="permission.includes('oscar') || permission.includes('staff-hardware-edit')"
                   @click="deleteHardware(hardware.id)"
                   class="btn btn-danger btn-sm"
               >
@@ -215,6 +217,7 @@
 import axios from "axios";
 import store from "../store/store.js";
 import { toast } from "@/utils/toast.js";
+import {mapState} from "vuex";
 
 export default {
   name: "HardwareTab",
@@ -248,6 +251,7 @@ export default {
 
   // Computed property to determine the correct image source for the modal preview
   computed: {
+    ...mapState(['permission']),
     previewImageUrl() {
       // 1. Show preview of the newly selected file (FileReader)
       if (this.selectedFile) {
@@ -256,9 +260,6 @@ export default {
       // 2. Show the existing primary image URL if editing
       return this.currentPrimaryImageUrl;
     },
-    isOscar() {
-      return store.getters.UserRole === 'oscar';
-    }
   },
 
   created() {

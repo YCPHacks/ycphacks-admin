@@ -4,14 +4,14 @@
 
     <div class="page-actions">
       <!-- Add Sponsor Tier Button -->
-      <div v-if="isOscar">
-        <button class="btn btn-primary" @click="toggleAddTierForm">
+      <div>
+        <button v-if="permission.includes('oscar')" class="btn btn-primary" @click="toggleAddTierForm">
           Add Sponsor Tier
         </button>
       </div>
 
       <!-- Remove Sponsor Tier Button -->
-      <div v-if="isOscar">
+      <div v-if="permission.includes('oscar')">
         <button class="btn btn-primary" @click="toggleRemoveTierForm">
           Remove Sponsor Tier
         </button>
@@ -19,13 +19,13 @@
 
       <!-- Add Sponsor Button -->
       <div>
-        <button class="btn btn-primary" @click="toggleAddForm">
+        <button v-if="permission.includes('oscar')" class="btn btn-primary" @click="toggleAddForm">
           Add Sponsor
         </button>
       </div>
 
       <!-- Remove Sponsor Button -->
-      <div v-if="isOscar">
+      <div v-if="permission.includes('oscar')">
         <button class="btn btn-primary" @click="toggleRemoveForm">
           Remove Sponsor
         </button>
@@ -33,7 +33,7 @@
     </div>
 
     <!-- Add Sponsor Tier Form -->
-    <div v-if="showAddTierForm" class="popup-overlay">
+    <div  v-if="showAddTierForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup">
         <h5>Add Sponsor Tier</h5>
         <form @submit.prevent="handleAddTier">
@@ -80,7 +80,7 @@
     </div>
 
     <!-- Remove Sponsor Tier Form -->
-    <div v-if="showRemoveTierForm && isOscar" class="popup-overlay">
+    <div v-if="showRemoveTierForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup">
         <h5>Remove Sponsor Tier</h5>
         <form @submit.prevent="removeSponsorTiers">
@@ -164,7 +164,7 @@
     </div>
 
     <!-- Remove Sponsor Form -->
-    <div v-if="showRemoveForm && isOscar" class="popup-overlay">
+    <div v-if="showRemoveForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup">
         <h5>Remove Sponsor</h5>
         <form @submit.prevent="removeSponsor">
@@ -244,7 +244,7 @@
     </div>
 
     <!-- Edit Sponsor Tier Popup -->
-    <div v-if="showEditTierForm && isOscar" class="popup-overlay">
+    <div v-if="showEditTierForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup" :key="currentEditTierId">
         <h5>Edit Sponsor Tier</h5>
         <form @submit.prevent="handleUpdateTier">
@@ -302,7 +302,7 @@
                   <tr>
                     <th class="text-left">Tier Name</th>
                     <th class="text-left">Donation Range</th>
-                    <th v-if="isOscar" class="text-center">Actions</th>
+                    <th v-if="permission.includes('oscar')" class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -312,8 +312,8 @@
                   <tr v-for="(tierData, index) in tierRanges" :key="tierData.id || index">
                     <td class="text-center">{{ tierData.tier }}</td>
                     <td class="text-center">{{ tierData.range }}</td>
-                    <td v-if="isOscar" class="text-center">
-                      <button class="btn btn-sm btn-warning" @click="openEditTierForm(tierData)">Edit</button>
+                    <td v-if="permission.includes('oscar')" class="text-center">
+                      <button  class="btn btn-sm btn-warning" @click="openEditTierForm(tierData)">Edit</button>
                     </td>
                   </tr>
                 </tbody>
@@ -360,7 +360,7 @@
                   <td data-label="Website" class="text-left">{{ sponsor.website }}</td>
 
                   <td class="text-center card-actions">
-                    <button class="btn btn-sm btn-warning" @click="openEditForm(index)">Edit</button>
+                    <button v-if="permission.includes('oscar')" class="btn btn-sm btn-warning" @click="openEditForm(index)">Edit</button>
                   </td>
                 </tr>
               </tbody>
@@ -503,10 +503,10 @@ const revertUrlFromServer = (transformedUrl) => {
 
 const store = useStore();
 
-// Checks if the user is oscar level
-const isOscar = computed(() => {
-    return store.getters.UserRole === 'oscar'; 
-});
+const permission = computed( () => {
+  console.log(store.state.permission)
+  return store.state.permission;
+})
 
 const formatCurrency = (amount) => {
   // Assuming amount is a number or can be converted to one

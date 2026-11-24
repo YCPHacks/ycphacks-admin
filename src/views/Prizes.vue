@@ -2,7 +2,7 @@
   <div class="container mt-5">
     <h2 class="mb-4 text-center">Prizes & Categories</h2>
 
-    <div v-if="isOscar" class="page-actions">
+    <div v-if="permission.includes('oscar')" class="page-actions">
       <!-- Add Category Button -->
       <button class="btn btn-primary" @click="toggleAddCategoryForm">
         Add Category
@@ -11,7 +11,7 @@
 
     <!-- Add Category Form -->
     <!-- This really only has the name, but will eventually have the subcategories -->
-    <div v-if="showAddCategoryForm && isOscar" class="popup-overlay">
+    <div v-if="showAddCategoryForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup">
         <h5>Add Category</h5>
         <form @submit.prevent="handleAddCategory">
@@ -34,7 +34,7 @@
 
 
     <!-- Edit Category Popup -->
-    <div v-if="showEditCategoryForm && isOscar" class="popup-overlay">
+    <div v-if="showEditCategoryForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup" :key="currentEditCategory_Id">
         <h5>Edit Category</h5>
         <form @submit.prevent="handleEditCategory">
@@ -60,7 +60,7 @@
 
 
     <!-- Add Prize Form -->
-    <div v-if="showAddPrizeForm && isOscar" class="popup-overlay">
+    <div v-if="showAddPrizeForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup">
         <h5>Add Prize</h5>
         <form @submit.prevent="handleAddPrize">
@@ -88,7 +88,7 @@
     </div>
 
     <!-- Edit Prize Form -->
-    <div v-if="showEditPrizeForm && isOscar" class="popup-overlay">
+    <div v-if="showEditPrizeForm && permission.includes('oscar')" class="popup-overlay">
       <div class="card p-3 popup">
         <h5>Edit Prize</h5>
         <form @submit.prevent="handleEditPrize">
@@ -128,8 +128,8 @@
         <h4 class="mb-0">{{categoryData.categoryName}}</h4>
 
         <div class="d-flex gap-2">
-          <button class="btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
-          <button v-if="isOscar" class="btn btn-primary" @click="openAddPrizeForm(categoryData.id)">
+          <button v-if="permission.includes('oscar')" class="btn btn-primary" @click="openEditCategoryForm(categoryData.id)">Edit</button>
+          <button v-if="permission.includes('oscar')" class="btn btn-primary" @click="openAddPrizeForm(categoryData.id)">
             Add Prize
           </button>
         </div>
@@ -143,7 +143,7 @@
                 <th class=text-left>Placement</th>
                 <th class=text-left>Name</th>
                 <th class=text-left>Handed Out?</th>
-                <th v-if="isOscar" class=text-center>Actions</th>
+                <th v-if="permission.includes('oscar')" class=text-center>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -159,15 +159,15 @@
                 <td class=text-center>{{prize.placement}}</td>
                 <td class=text-center>{{prize.prizeName}}</td>
                 <td class=text-center>{{prize.handedOut? "Yes" : "No"}}</td>
-                <td v-if="isOscar" class=text-center>
-                  <button class="btn btn-sm btn-warning" @click="openEditPrizeForm(prize.id)">Edit</button>
+                <td v-if="permission.includes('oscar')" class=text-center>
+                  <button v-if="permission.includes('oscar')" class="btn btn-sm btn-warning" @click="openEditPrizeForm(prize.id)">Edit</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-      <div class="ms-2">
+      <div v-if="permission.includes('oscar')" class="ms-2">
         <p>Click a prize to edit.</p>
       </div>
     </div>
@@ -180,6 +180,11 @@ import { useStore } from 'vuex';
 import { toast } from '@/utils/toast.js';
 
 const store = useStore();
+
+const permission = computed( () => {
+  console.log(store.state.permission)
+  return store.state.permission;
+})
 
 // List of categories
 const categories = ref([]);

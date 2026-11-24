@@ -3,7 +3,7 @@
         <h2 class="mb-4 text-center">Team Registration</h2>
 
         <div class="page-actions">
-          <div>
+          <div v-if="permission.includes('oscar') || permission.includes('staff-team-registration-edit')">
             <button class="btn btn-primary" :disabled="PDFloading" @click="downloadTeamsPDF">
                 <span v-if="PDFloading" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                 {{ PDFloading ? 'Generating PDF...' : 'Export Teams' }}
@@ -12,12 +12,12 @@
 
 
             <!-- Add Team Button -->
-            <div>
+          <div v-if="permission.includes('oscar') || permission.includes('staff-team-registration-edit')">
                 <button class="btn btn-primary" @click="toggleAddForm">
                     Add Team
                 </button>
             </div>
-            <div v-if="isOscar">
+          <div v-if="permission.includes('oscar') || permission.includes('staff-team-registration-edit')">
                 <button class="btn btn-primary" @click="toggleRemoveForm">
                     Remove Team
                 </button>
@@ -61,7 +61,7 @@
                                         </span>
                                     </td>
                                     <td class="text-center card-actions">
-                                        <button class="btn btn-sm btn-warning" @click="openEditTeamForm(item)">Edit</button>
+                                        <button v-if="permission.includes('oscar') || permission.includes('staff-team-registration-edit')" class="btn btn-sm btn-warning" @click="openEditTeamForm(item)">Edit</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -160,7 +160,7 @@
         </div>
 
         <!-- Remove Team Modal -->
-         <div v-if="showRemoveForm && isOscar" class="popup-overlay">
+         <div v-if="showRemoveForm && (permission.includes('oscar') || permission.includes('staff-team-registration-edit'))" class="popup-overlay">
             <div class="card p-4 popup">
                 <header class="modal-header">
                     <h5 class="modal-title text-danger">Confirm Team Deletion</h5>
@@ -298,6 +298,7 @@
 import axios from "axios";
 import store from "../store/store.js";
 import { toast } from "@/utils/toast.js";
+import {mapState} from "vuex";
 const API_BASE_URL = `${store.state.apiBaseUrl}`;
 
 export default{
@@ -344,12 +345,11 @@ export default{
         this.fetchUnassignedUsers();
     },
     computed:{
+      ...mapState(['permission']),
         activeEventId() {
           return this.$store.state.event?.id;
         },
-        isOscar(){
-            return this.$store.getters.UserRole === 'oscar';
-        },
+
         filteredTeamData() {
             // Since tabs are removed, this always returns teams
             return this.teams;

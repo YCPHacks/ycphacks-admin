@@ -47,7 +47,8 @@ export default {
     ...mapActions(['loginAdminUser']),
     async handleSubmit() {
       this.isLoading = true;
-      const formData = { email: this.email, password: this.password };
+      this.showAlert = false;
+      const formData = { email: this.email, password: this.password, eventId: this.$store.state.event.id };
 
       try {
         const result = await store.dispatch('loginAdminUser', formData);
@@ -66,7 +67,8 @@ export default {
   created() {
     // this runs to see if any token is stored in the local storage
     this.$store.dispatch('validateWithToken');
-  }
+    this.$store.dispatch('getActiveEvent');
+  },
 };
 </script>
 

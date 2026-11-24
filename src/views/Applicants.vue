@@ -10,12 +10,12 @@
         </button>
       </li>
       <!-- Only Oscar should have access to Staff -->
-      <li class="nav-item" v-if="isOscar">
+      <li class="nav-item" v-if="permission.includes('oscar')">
         <button class="nav-link" :class="{ active: activeTab === 'staff' }" @click="activeTab = 'staff'">
           Staff Users
         </button>
       </li>
-      <li class="nav-item" v-if="isOscar">
+      <li class="nav-item" v-if="permission.includes('oscar')">
         <button class="nav-link" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">
           All Users
         </button>
@@ -66,13 +66,13 @@
           </div>
         </div>
 
-      <button class="btn btn-primary mb-0 fw-bold" @click="showImportModal = true" v-if="isOscar">
+      <button class="btn btn-primary mb-0 fw-bold" @click="showImportModal = true" v-if="permission.includes('oscar')">
         Import CSV
       </button>
-      <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="isOscar">
+      <button class="btn btn-success mb-0 fw-bold" @click="openExportModal" v-if="permission.includes('oscar')">
         Export Users
       </button>
-      
+      </div>
     </div>
 
     <!-- Search Input -->
@@ -191,7 +191,7 @@
       </div>
     </div>
 
-    <div v-if="showEditUserForm && isOscar" class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div v-if="showEditUserForm && permission.includes('oscar')" class="modal fade show d-block" tabindex="-1" role="dialog">
       <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
           <div class="modal-header">
@@ -218,31 +218,40 @@
                 <input type="email" class="form-control" id="editEmail" v-model="editUserData.email" required>
               </div>
               
-              <div class="mb-3" v-if="isOscar">
+              <div class="mb-3" v-if="permission.includes('oscar')">
                 <label for="editRole" class="form-label">Role</label>
-                
-                <select 
-                  class="form-select" 
-                  id="editRole" 
-                  v-model="editUserData.role"
-                >
-                  <option 
-                      v-for="role in userRoles" 
-                      :key="role.value" 
-                      :value="role.value"
+
+                <div class="role-picker">
+                  <div
+                      v-for="role in selectableRoles"
+                      :key="role.value"
+                      class="form-check"
+                      :class="{ 'role-sub': role.requiresStaff }"
                   >
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        :id="'role-' + role.value"
+                        :checked="editUserData.role.includes(role.value)"
+                        :disabled="role.requiresStaff && !hasStaffRole"
+                        @change="toggleRole(role.value, $event.target.checked)"
+                    >
+                    <label
+                        class="form-check-label"
+                        :class="{ 'text-muted': role.requiresStaff && !hasStaffRole }"
+                        :for="'role-' + role.value"
+                    >
                       {{ role.text }}
-                  </option>
-                </select>
+                    </label>
+                  </div>
+                  <div class="form-text">Sub-roles require Staff to be selected first</div>
+                </div>
                 <div v-if="revertMessage" class="alert alert-danger mt-2" role="alert">
                   {{ revertMessage }}
                 </div>
-                <div v-else-if="isPrivilegedRole(editUserData.role) && isYorkCollegeUser" class="alert alert-warning mt-2" role="alert">
-                  Role change to '{{ editUserData.role }}' is permitted for York College users.
-                </div>
               </div>
 
-              <div class="mb-3" v-if="isOscar">
+              <div class="mb-3" v-if="permission.includes('oscar')">
                 <hr>
                 <div class="form-check form-switch">
                   <input 
@@ -309,7 +318,7 @@
       </div>
     </div>
 
-    <div v-if="showEditUserForm && isOscar" class="modal-backdrop fade show"></div>
+    <div v-if="showEditUserForm && permission.includes('oscar')" class="modal-backdrop fade show"></div>
 
     <!-- Table Section -->
     <div class="table-container shadow-lg rounded overflow-hidden">
@@ -328,7 +337,7 @@
               <th class="text-left">School</th>
               <th class="text-left">T-Shirt Size</th>
               <th class="text-left">Dietary Restrictions</th>
-              <th v-if="isOscar">Actions</th>
+              <th v-if="permission.includes('oscar')">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -350,18 +359,20 @@
               <!-- Add Check Boxes for Check in -->
               <td data-label="Role" v-if="activeTab === 'all'" class="role-column">
                 <div class="role-badge-wrapper">
-                  <span 
-                    class="badge role-badge text-center" 
-                    :class="getRoleBadgeClass(user.role)"
-                  >
-                    {{ user.role.toUpperCase() }}
-                  </span>
+                 <span
+                     v-for="perm in user.permissions"
+                     :key="perm"
+                     class="badge role-badge text-center"
+                     :class="getRoleBadgeClass(perm)"
+                 >
+                  {{ getRoleLabel(perm) }}
+                </span>
                 </div>
               </td>
               <td data-label="Checked In?" class="text-center align-middle table-checkbox-center" v-if="activeTab === 'participant'">
-                <input 
+                <input
                   type="checkbox" 
-                  :checked="user.checkIn" 
+                  :checked="user.checkIn"
                   @change="toggleCheckIn(user.id)"
                   class="form-check-input"
                 >
@@ -383,7 +394,7 @@
                 </span>
                 <span v-else class="text-muted">–</span>
               </td>
-              <td v-if="isOscar" class="text-center card-actions">
+              <td v-if="permission.includes('oscar')" class="text-center card-actions">
                 <button class="btn btn-sm btn-warning" @click="openEditUserForm(index)">Edit</button>
               </td>
             </tr>
@@ -398,6 +409,7 @@
 import axios from "axios";
 import store from "../store/store.js";
 import { QrcodeStream } from 'vue-qrcode-reader'
+import {mapState} from "vuex";
 import { toast } from "@/utils/toast.js";
 
 
@@ -467,7 +479,7 @@ export default {
 
   watch: {
     'editUserData.role'(newRole, oldRole) {
-      if(this.showEditUserForm && newRole !== oldRole) {
+      if (this.showEditUserForm && JSON.stringify(newRole) !== JSON.stringify(oldRole)) {
         this.checkRoleChangeEligibility(newRole, oldRole);
       }
     },
@@ -486,6 +498,8 @@ export default {
       paused: false,
 
       users: [],
+      // A list of all permissions for the active event
+      permissions: [],
       searchQuery: "",
       activeTab: "participant", // 'all' or 'staff'
 
@@ -508,8 +522,10 @@ export default {
         { value: "3XL", text: '3XL' }
       ],
       userRoles: [
-        { value: 'PARTICIPANT', text: 'Participant' },
         { value: 'STAFF', text: 'Staff' },
+        { value: 'STAFF-USER-MANAGEMENT-EDIT', text: 'User Management', requiresStaff: true },
+        { value: 'STAFF-TEAM-REGISTRATION-EDIT', text: 'Team Management', requiresStaff: true },
+        { value: 'STAFF-HARDWARE-EDIT', text: 'Hardware Management', requiresStaff: true },
         { value: 'OSCAR', text: 'Oscar' }
       ],
 
@@ -526,39 +542,64 @@ export default {
     };
   },
   async mounted() {
-    try {
-      await this.$store.dispatch('getActiveEvent');
-    } catch (error) {
-      console.warn("No active event found:", error);
-    }
-    
-      await this.fetchUsers();
-    },
+    await this.$store.dispatch('getActiveEvent'); 
+    await this.fetchUsers();
+    await this.fetchPermissions();
+    console.log(this.permissions);
+  },
   computed: {
+    ...mapState(['permission']),
+
+    selectableRoles() {
+      return this.userRoles;
+    },
+    hasStaffRole() {
+      return (this.editUserData.role || []).includes('STAFF');
+    },
+
     activeEventId(){
       return this.$store.state.event?.id;
     },
-    isOscar(){
-      return this.$store.getters.UserRole === 'oscar';
-    },
     filteredUsers() {
       const query = this.searchQuery.toLowerCase();
+
+      const permsById = new Map();
+      for (const { participantId, permission} of this.permissions) {
+        if (!permsById.has(participantId)) {
+          permsById.set(participantId, new Set());
+        }
+        permsById.get(participantId).add(permission.toLowerCase());
+      }
+      const permsFor = user => permsById.get(user.id) ?? new Set();
+
       let list = this.users;
 
-      if(this.activeTab === "staff"){
-        list = this.users.filter(user => user.role.toLowerCase() === "staff" || user.role.toLowerCase() === "oscar");
-      }else if(this.activeTab === "participant"){
-        list = this.users.filter(user => user.role.toLowerCase() === "participant");
+      if (this.activeTab === "staff") {
+        // has staff or oscar
+        list = this.users.filter(user => {
+          const p = permsFor(user);
+          return p.has("staff") || p.has("oscar");
+        });
+      } else if (this.activeTab === "participant") {
+        // only participant
+        list = this.users.filter(user => {
+          const p = permsFor(user);
+          return p.size > 0 && [...p].every(x => x === "participant");
+        });
       }
 
-      let filteredList = list.filter(
-        user=>
+      // This is for adding the users permissions to the list
+      let filteredList = list.map(user => ({
+        ...user,
+        permissions: [...permsFor(user)],
+      })).filter(user=>
           user.firstName.toLowerCase().includes(query) ||
           user.lastName.toLowerCase().includes(query) ||
           user.email.toLowerCase().includes(query) ||
           (user.tShirtSize && user.tShirtSize.toLowerCase().includes(query)) ||
           (user.dietaryRestrictions && user.dietaryRestrictions.toLowerCase().includes(query)) ||
-          (user.school && user.school.toLowerCase().includes(query))
+          (user.school && user.school.toLowerCase().includes(query)) ||
+          user.permissions.some(p => p.includes(query))
       );
 
       filteredList.sort((a, b) => {
@@ -571,7 +612,7 @@ export default {
         if (a.firstName > b.firstName) return 1;
         return 0;
       });
-      
+
       return filteredList;
     },
     tshirtSizeTally() {
@@ -618,6 +659,24 @@ export default {
       } catch (err){
         console.error(err)
       }
+    },
+
+    toggleRole(value, checked) {
+      const current = new Set(this.editUserData.role || []);
+
+      if (checked) {
+        current.add(value);
+      } else {
+        current.delete(value);
+        // Unchecking Staff also clears every staff sub-role
+        if (value === 'STAFF') {
+          this.userRoles
+              .filter(r => r.requiresStaff)
+              .forEach(r => current.delete(r.value));
+        }
+      }
+
+      this.editUserData.role = [...current];
     },
 
     /* Actions that will be preformed if a QR code is detected */
@@ -671,6 +730,13 @@ export default {
         console.error("Validation failed:", err);
         toast.error("Server error validating QR");
       }
+    },
+
+    getRoleLabel(role) {
+      const key = String(role).toUpperCase();
+      if (key === 'PARTICIPANT') return 'Participant';
+      const match = this.userRoles.find(r => r.value === key);
+      return match ? match.text : role;
     },
 
     /* Open the Scanner modal window */
@@ -758,7 +824,8 @@ export default {
     },
     isPrivilegedRole(role){
       if (!role) return false;
-      return this.privilegedRoles.includes(role.toUpperCase());
+      const roles = Array.isArray(role) ? role : [role];
+      return roles.some(r => this.privilegedRoles.includes(String(r).toUpperCase()));
     },
     checkRoleChangeEligibility(newRole, oldRole){
       this.revertMessage = null;
@@ -840,28 +907,33 @@ export default {
       }
     },
     async fetchUsers() {
-  try {
-    if (!this.activeEventId) {
-      this.users = [];
-      return;
-    }
+      const eventId = this.activeEventId;
 
-    const usersResponse = await axios.get(
-      `${store.state.apiBaseUrl}/user/all`,
-      {
-        params: {
-          eventId: this.activeEventId
-        }
+      try {
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all?eventId=${eventId}`);
+        this.users = response.data.data;
+      } catch (error) {
+        console.error("Error fetching users:", error);
       }
-    );
+    },
+    async fetchPermissions() {
+      const eventId = this.activeEventId;
 
-    this.users = usersResponse.data.data || [];
+      try {
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all/participant?eventId=${eventId}`);
+        this.permissions = response.data.data;
+      } catch (error) {
+        console.error("Error fetching permissions:", error);
+      }
+    },
 
-  } catch (error) {
-    console.error("Error fetching users:", error);
-  }
-},
     async toggleCheckIn(userId){
+      const allowed = ['oscar', 'staff-user-management-edit'];
+      const canToggle = allowed.some(p => this.permission?.includes(p));
+      if (!canToggle) {
+        console.warn('You do not have permission to change check-in status.');
+        return;
+      }
       // console.log('Attempting to toggle check-in for ID:', userId);
       const userIdNumber = Number(userId);
       const user = this.users.find(u => u.id === userIdNumber);
@@ -1001,14 +1073,41 @@ export default {
       this.editUserData = {...editableData};
       this.editUserOriginalData = { ... editableData };
 
-      if (this.editUserData.role) {
-        this.editUserData.role = this.editUserData.role.toUpperCase();
-      }
+      this.editUserData.role = (user.permissions || []).map(p => p.toUpperCase());
+      this.editUserOriginalData.role = [...this.editUserData.role];
     },
     async handleUpdateUser(){
       this.editUserError = null;
 
       const userId = this.editUserData.id;
+      console.log(userId);
+
+      let participantId = null;
+
+      //TODO: editUserData.role should have the new permissions that we want to give to the user
+      // we should just be able to get the users participantId here using there userId
+      // think about how we will need to handling removing permissions from a participant
+      const eventId = this.activeEventId;
+
+      try {
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/${userId}/participant?eventId=${eventId}`);
+        participantId = response.data.participantId.id;
+
+        console.log("I am the participant id", participantId);
+      } catch (error) {
+        console.error("Error fetch participantId:", error);
+      }
+
+      // Set the new permissions and get rid of the old ones
+      const newPermissions = [...new Set([
+        'participant',
+        ...this.editUserData.role.map(r => r.toLowerCase()),
+      ])];
+
+        await axios.put(`${store.state.apiBaseUrl}/user/${participantId}/permissions`, {
+          permissions: newPermissions
+        })
+
 
       const originalIsBanned = this.editUserOriginalData.isBanned;
       const newIsBanned = this.editUserData.isBanned;
@@ -1023,11 +1122,12 @@ export default {
           school: this.editUserData.school,
           tShirtSize: this.editUserData.tShirtSize,
           dietaryRestrictions: this.editUserData.dietaryRestrictions,
-          role: this.editUserData.role,
           isBanned: this.editUserData.isBanned
         };
 
         await axios.put(`${store.state.apiBaseUrl}/user/${userId}`, payload);
+
+        // This is specifically for permission changes
 
         if (originalIsBanned && !newIsBanned) {
           console.log(`Ban lifted for user ${userId}. Unassigning from team...`);
@@ -1107,15 +1207,15 @@ export default {
 
 .table thead th.role-column-header{
   /* Apply shrink-wrap to header */
-  width: 130px;
+  width: 160px;
   white-space: nowrap;
   text-align: center;
-  max-width: 130px;
+  max-width: 160px;
 }
 
 .table tbody tr td.role-column {
-  width: 130px;
-  max-width: 130px;
+  width: 160px;
+  max-width: 160px;
   padding: 0.3rem 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -1132,10 +1232,11 @@ export default {
 }
 
 .role-badge-wrapper {
-  width: 130px;
-  max-width: 130px;
-  overflow: hidden;
+  width: 160px;
+  max-width: 160px;
   display: flex;
+  row-gap: 4px;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
 }
@@ -1290,6 +1391,16 @@ table tbody tr td.table-checkbox-center .form-check-input{
 .scanner-camera {
   width: 100%;
   height: 300px;
+}
+
+.role-picker {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.role-picker .role-sub {
+  margin-left: 1.5rem;
 }
 
 /* Matches the size tallies. The light tint keeps it from reading as a button */

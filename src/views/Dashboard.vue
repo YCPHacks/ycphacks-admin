@@ -146,6 +146,8 @@ export default {
     return {
       showAllActivities: false,
       users: [],
+      participants: [],
+      permissions: [],
       hardware: [],
       teams: [],
       sponsors: [],
@@ -155,6 +157,7 @@ export default {
   async mounted() {
     await this.$store.dispatch('getActiveEvent'); 
     await this.fetchUsers();
+    await this.fetchPermissions();
     await this.fetchTeams();
     await this.fetchActivities();
     await this.fetchHardware();
@@ -168,7 +171,7 @@ export default {
       return this.$store.state.event?.id;
     },
     checkedInCount(){
-      return this.users.filter(user => user.checkIn && user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar').length;
+      return this.users.filter(user => user.checkIn).length;
     },
     sponsorCount() {
       return this.sponsors.length;
@@ -198,22 +201,48 @@ export default {
 
       return numReservedHardware;
     },
+    /*
     registeredParticipantCount(){
-      return this.users.filter(user =>
-        user.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar'
+      return this.participants.filter(participant =>
+        participant.role.toLowerCase() !== 'staff' && user.role.toLowerCase() !== 'oscar'
       ).length;
+    },
+
+     */
+    registeredParticipantCount() {
+      const participantCount = new Set(
+          this.permissions
+              .filter(p => p.permission === 'participant')
+              .map(p => p.participantId)
+      ).size;
+      return participantCount;
     },
     allTally() {
       return this.calculateTally(this.users);
     },
     participantTally() {
-      const participants = this.users.filter(u => u.role.toLowerCase() === "participant");
-      return this.calculateTally(participants);
+      const list = this.participantGroups.filter(g =>
+          g.perms.includes('participant') &&
+          !g.perms.some(p => ['staff', 'oscar'].includes(p))
+      );
+      return this.calculateTally(list);
+    },
+    participantGroups() {
+      const groups = new Map();
+      for (const p of this.permissions) {
+        if (!groups.has(p.participantId)) {
+          groups.set(p.participantId, { tShirtSize: p.tShirtSize, perms: [] });
+        }
+        groups.get(p.participantId).perms.push(p.permission);
+      }
+      return [...groups.values()];
     },
     staffTally() {
-      // Assuming 'oscar' is also counted as staff
-      const staff = this.users.filter(u => u.role.toLowerCase() === "staff" || u.role.toLowerCase() === "oscar");
-      return this.calculateTally(staff);
+      // 'oscar' counts as staff
+      const list = this.participantGroups.filter(g =>
+          g.perms.some(p => ['staff', 'oscar'].includes(p))
+      );
+      return this.calculateTally(list);
     },
     sortedActivities() {
       if (!this.getActivities?.length) return [];
@@ -245,6 +274,19 @@ export default {
         console.error("Error fetching users:", error);
       }
     },
+
+    async fetchPermissions() {
+      const eventId = this.activeEventId;
+
+      try {
+        const response = await axios.get(`${store.state.apiBaseUrl}/user/all/participant?eventId=${eventId}`);
+        this.permissions = response.data.data;
+        console.log(this.permissions);
+      } catch (error) {
+        console.error("Error fetching permissions:", error);
+      }
+    },
+
     async fetchTeams() {
       const eventId = this.activeEventId;
       try {
